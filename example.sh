@@ -1,0 +1,1 @@
+ python /Users/ajaver/Documents/GitHub/classify_strains/nn/real_validation.py S90_F0.1_SWDB_W_ang_resnet50_D0.0-0259-2.6588.h5 --data_file=CeNDR_skel_smoothed.hdf5 --is_reduced --is_angle --set_type='test'
