@@ -171,6 +171,7 @@ def get_model_results(model_path,
         elif 'CeNDR' in data_file: 
             valid_strains = CeNDR_DIVERGENT_SET
 
+    print(valid_strains)
     print('loading model...')
     model = load_model(model_path)
      

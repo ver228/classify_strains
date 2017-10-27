@@ -97,9 +97,15 @@ class SkeletonsFlow():
                 valid_indices = fid.get_node('/index_groups/' + set_type)[:]
                 skeletons_ranges = skeletons_ranges.loc[valid_indices]
         
+        #filter data to contain only the valid strains given
+        if valid_strains is not None:
+            skeletons_ranges = skeletons_ranges[skeletons_ranges['strain'].isin(valid_strains)]
+
         #minimum number of experiments/videos per strain
         skeletons_ranges = skeletons_ranges.groupby('strain_id').filter(lambda x: len(x['experiment_id'].unique()) >= min_num_experiments)
         
+
+
         self.skeletons_ranges = skeletons_ranges
         self.skel_range_grouped = skeletons_ranges.groupby('strain_id')
         self.strain_ids = list(map(int, self.skel_range_grouped.indices.keys()))
