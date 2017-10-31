@@ -4,6 +4,7 @@ Code modified from https://github.com/pytorch/vision/blob/master/torchvision/mod
 
 """
 import torch.nn as nn
+import torch.nn.functional as F
 import math
 
 def conv3x3(in_planes, out_planes, stride=1):
@@ -76,6 +77,8 @@ class ResNetS(nn.Module):
         self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
         
         self.avgpool = nn.AvgPool2d((7,2), stride=1)
+        
+        
         self.fc = nn.Linear(512 * block.expansion, num_classes)
         
         #initialize all the modules, Xavier initialization for conv2d
@@ -111,11 +114,16 @@ class ResNetS(nn.Module):
         x = self.maxpool(x)
 
         x = self.layer1(x)
+        
         x = self.layer2(x)
         x = self.layer3(x)
         x = self.layer4(x)
-
+        
         x = self.avgpool(x)
+        
+        #global max pooling
+        x = F.max_pool2d(x, kernel_size=x.size()[2:])
+        
         x = x.view(x.size(0), -1)
         x = self.fc(x)
 

@@ -165,15 +165,18 @@ class SkeletonsFlow():
         return skel_r
     
     def next_single(self):
-         strain_id, skeletons = self._random_choice()
+        strain_id, skeletons = self._random_choice()
 
-         if not self.is_angle:
+        if not self.is_angle:
             X = self._random_transform(skeletons)
-         else:
+        else:
             X, _ = _h_angles(skeletons)
             X = X[..., None]
          
-         return X, strain_id
+        Y = np.zeros(self.n_clases, np.int32)
+        Y[strain_id] = 1
+
+        return X, Y
      
     def __next__(self):
         D = [self.next_single() for n in range(self.n_batch)]
