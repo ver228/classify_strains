@@ -41,10 +41,12 @@ def accuracy(output, target, topk=(1,)):
         res.append(correct_k.mul_(100.0 / batch_size))
     return res
 
-def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
-    torch.save(state, filename)
+def save_checkpoint(state, is_best, save_dir, filename='checkpoint.pth.tar'):
+    checkpoint_path = os.path.join(save_dir, filename)
+    torch.save(state, checkpoint_path)
     if is_best:
-        shutil.copyfile(filename, 'model_best.pth.tar')
+        best_path = os.path.join(save_dir, 'model_best.pth.tar')
+        shutil.copyfile(checkpoint_path, best_path)
 
 class TBLogger(object):
     
@@ -108,8 +110,6 @@ def _h_epoch(model, gen, is_train, batch_per_epoch = None, topk = (1, 5)):
     
     return log_data
 
-
-
 if __name__ == '__main__':
     if sys.platform == 'linux':
         log_dir_root = '/work/ajaver/classify_strains/results'
@@ -125,7 +125,7 @@ if __name__ == '__main__':
     sample_size_frames_s = sample_size_frames_s_dflt
     sample_frequency_s = 1/10
     
-    n_epochs = 1
+    n_epochs = 100
     n_batch_base = 32
     batch_per_epoch = None
     
@@ -134,7 +134,6 @@ if __name__ == '__main__':
     is_reduced = True
     
     #%%
-    
     if is_CeNDR:
         data_file =  os.path.join(data_dir, 'CeNDR', 'CeNDR_skel_smoothed.hdf5')
         bn_prefix = 'CeNDR_'
@@ -173,18 +172,14 @@ if __name__ == '__main__':
                            is_angle = is_angle
                            )
     
-    
-    
-    
-    
     X,Y = next(train_generator)
     num_classes = Y.shape[1]
     #%%
     model = ResNetS(Bottleneck, [3, 4, 6, 3], n_channels=1, num_classes = num_classes)
     
     base_name = bn_prefix + type(model).__name__
-    base_name = 'S{}_F{:.2}_{}'.format(sample_size_frames_s, sample_frequency_s, base_name)
-    log_dir = os.path.join(log_dir_root, 'logsN', '%s_%s' % (base_name, time.strftime('%Y%m%d_%H%M%S')))
+    base_name = '{}_S{}_F{:.2}'.format(base_name, sample_size_frames_s, sample_frequency_s)
+    log_dir = os.path.join(log_dir_root, '%s_%s' % (base_name, time.strftime('%Y%m%d_%H%M%S')))
     
     print(model)  
     print(list(train_generator.skeletons_ranges['strain'].unique()))
@@ -204,6 +199,7 @@ if __name__ == '__main__':
     # Set the logger
     logger = TBLogger(log_dir)
     
+    best_prec1 = 0
     for epoch in range(1, n_epochs + 1):
         t_log_data = _h_epoch(model, 
                               train_generator,  
@@ -217,4 +213,27 @@ if __name__ == '__main__':
                               is_train = False)
         test_loss, test_pred1, test_pred5 = map(np.mean, zip(*v_log_data))
         
+        is_best = test_pred1 > best_prec1
+        best_prec1 = max(test_pred1, best_prec1)
         
+        
+        
+        state = {
+            'epoch': epoch,
+            'state_dict': model.state_dict(),
+            'best_prec1': best_prec1,
+            'optimizer' : optimizer.state_dict(),
+        }
+        save_checkpoint(state, is_best, save_dir=log_dir)
+        
+        tb_info = {
+                'train_loss':train_loss, 
+                'train_pred1':train_pred1, 
+                'train_pred5':train_pred5, 
+                'test_loss':train_loss, 
+                'test_pred1':train_pred1, 
+                'test_pred5':train_pred5
+                }
+        
+        for tag, value in tb_info.items():
+            logger.scalar_summary(tag, value, epoch)
