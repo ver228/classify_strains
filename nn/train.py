@@ -13,13 +13,18 @@ import math
 import numpy as np
 import shutil
 
+
+import torch
 import tqdm
 import tensorflow as tf
 import time
 
 from sklearn.metrics import f1_score
 
-from pytorch_models import ResNetS, Bottleneck
+from model_resnet import ResNetS, Bottleneck
+from model_rnn import RNNModel
+
+
 from skeletons_flow import SkeletonsFlow, CeNDR_DIVERGENT_SET, SWDB_WILD_ISOLATES
 
 IS_CUDA = torch.cuda.is_available()
@@ -32,6 +37,32 @@ if IS_CUDA:
 #default values
 sample_size_frames_s_dflt = 90.
 sample_frequency_s_dflt = 1/10
+
+def _h_get_model(num_classes, model_type, n_channels=1):
+    
+    if model_type == 'resnet50':
+        model = ResNetS(Bottleneck, [3, 4, 6, 3], n_channels=1, num_classes = num_classes)
+    
+    elif model_type == 'lstm':
+        model = RNNModel('LSTM',
+               num_classes = num_classes, 
+               input_size = 48, 
+               hidden_size = 256, 
+               nlayers = 3
+               )
+    
+    elif model_type == 'gru':
+        model = RNNModel('GRU',
+               num_classes = num_classes, 
+               input_size = 48, 
+               hidden_size = 256, 
+               nlayers = 3
+               )
+        
+    else:
+        raise ValueError(model_type)
+
+    return model
 
 def accuracy(output, target, topk=(1,)):
     """Computes the precision@k for the specified values of k"""
@@ -79,7 +110,9 @@ class Trainer(object):
                  test_generator,
                  n_epochs,
                  batch_per_epoch,
-                 log_dir):
+                 log_dir,
+                 model_type
+                 ):
         
         self.model = model
         self.optimizer = optimizer
@@ -90,6 +123,7 @@ class Trainer(object):
         self.n_epochs = n_epochs
         self.log_dir = log_dir
         self.batch_per_epoch = batch_per_epoch
+        self.is_rnn = any(x in model_type for x in ['lstm', 'gru'])
         
         # Set the logger
         self.logger = TBLogger(log_dir)
@@ -128,6 +162,13 @@ class Trainer(object):
             for tag, value in tb_info.items():
                 self.logger.scalar_summary(tag, value, self.epoch)
     
+    def _h_get_n_batch(self, gen):
+        if self.batch_per_epoch is None:
+            batch_per_epoch = max(1, len(gen)//gen.n_batch)
+        else:
+            batch_per_epoch = self.batch_per_epoch
+        return batch_per_epoch
+    
     def _h_epoch(self,
                  model,
                  is_train,
@@ -142,28 +183,13 @@ class Trainer(object):
             gen = self.test_generator
             model.eval()
         
-        if self.batch_per_epoch is None:
-            batch_per_epoch = max(1, len(gen)//gen.n_batch)
-        else:
-            batch_per_epoch = self.batch_per_epoch
         
+        batch_per_epoch = self._h_get_n_batch(gen)
         pbar = tqdm.trange(batch_per_epoch)
         for step in pbar:
-            X,Y = next(gen)
-            Y = Y.argmax(axis=1) + 1 # target must be 1, 2, ... number_of_classes
-            X = np.rollaxis(X, -1, 1) # the channel dimension must be the second one
-            Xt = torch.from_numpy(X).float()
-            Yt = torch.from_numpy(Y).long()
-            if IS_CUDA:
-                Xt.cuda()
-                Yt.cuda()
-            
-            input_var = autograd.Variable(Xt)
-            target_var = autograd.Variable(Yt)
+            input_var, target_var = self._h_transform_func(next(gen))
             
             output = model(input_var)
-            (prec1, prec5), f1 = accuracy(output, target_var, topk = topk)
-            
             loss = self.criterion(output, target_var)
             if is_train:
                 # Before the backward pass, use the optimizer object to zero all of the
@@ -175,8 +201,13 @@ class Trainer(object):
                 # After this call w1.grad and w2.grad will be Variables holding the gradient
                 # of the loss with respect to w1 and w2 respectively.
                 loss.backward()
+                
+                # `clip_grad_norm` helps prevent the exploding gradient problem in RNNs / LSTMs.
+                torch.nn.utils.clip_grad_norm(model.parameters(), 0.25)
+                
                 self.optimizer.step()
             
+            (prec1, prec5), f1 = accuracy(output, target_var, topk = topk)
             iter_data = (self.epoch, loss.data[0], prec1.data[0], prec5.data[0], f1)
             str_d = 'Epoch: %i [Loss: %.4f, Acc: @1 %.2f | @5 %.2f, F1: %.2f]' % iter_data
             if not is_train:
@@ -186,9 +217,32 @@ class Trainer(object):
             log_data.append(iter_data[1:])
         
         return log_data
+    
+    def _h_transform_func(self, D):
+        X, Y = D
+        
+        Y = Y.argmax(axis=1) + 1 # target must be 1, 2, ... number_of_classes
+        X = np.rollaxis(X, -1, 1) # the channel dimension must be the second one
+        
+        Xt = torch.from_numpy(X).float()
+        if self.is_rnn:
+            Xt = Xt.view(Xt.size(0), -1, Xt.size(-1))
+        Yt = torch.from_numpy(Y).long()
+        
+        if IS_CUDA:
+            Xt.cuda()
+            Yt.cuda()
+            
+        input_var = autograd.Variable(Xt)
+        target_var = autograd.Variable(Yt)
+        
+        return input_var, target_var
+
+
 
 
 def main(
+        model_type,
         sample_size_frames_s = sample_size_frames_s_dflt,
         sample_frequency_s = sample_frequency_s_dflt,
         n_epochs = 100,
@@ -249,9 +303,9 @@ def main(
     num_classes = Y.shape[1]
     #%%
     
-    model = ResNetS(Bottleneck, [3, 4, 6, 3], n_channels=1, num_classes = num_classes)
+    model = _h_get_model(num_classes, model_type = model_type)
     
-    base_name = bn_prefix + type(model).__name__
+    base_name = model_type + '_' + bn_prefix
     base_name = '{}_S{}_F{:.2}'.format(base_name, sample_size_frames_s, sample_frequency_s)
     log_dir = os.path.join(log_dir_root, '%s_%s' % (base_name, time.strftime('%Y%m%d_%H%M%S')))
     
@@ -270,6 +324,7 @@ def main(
         criterion.cuda()
         model = nn.parallel.DistributedDataParallel(model)
     
+    
     t = Trainer(model,
              optimizer,
              criterion,
@@ -277,21 +332,25 @@ def main(
              test_generator,
              n_epochs,
              batch_per_epoch,
-             log_dir)
+             log_dir,
+             model_type
+             )
     t.fit()
-    
-    
+
+
+
 
 if __name__ == '__main__':
-  #import fire
-  #fire.Fire(main)    
+  import fire
+  fire.Fire(main)    
   
-  main(sample_size_frames_s = sample_size_frames_s_dflt,
-        sample_frequency_s = sample_frequency_s_dflt,
-        n_epochs = 10,
-        n_batch_base = 32,
-        batch_per_epoch = 3,
-        is_angle = True,
-        is_CeNDR = True,
-        is_reduced = True
-        )
+#  main(model_type = 'resnet50',
+#       sample_size_frames_s = sample_size_frames_s_dflt,
+#        sample_frequency_s = sample_frequency_s_dflt,
+#        n_epochs = 2,
+#        n_batch_base = 32,
+#        batch_per_epoch = 3,
+#        is_angle = True,
+#        is_CeNDR = True,
+#        is_reduced = True
+#        )
