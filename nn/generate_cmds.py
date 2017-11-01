@@ -45,7 +45,7 @@ if __name__ == '__main__':
     is_CeNDR = [True, False],
     is_angle = [True],
     is_reduced = [True, False],
-    sample_size_frames_s = [10, 90],
+    sample_size_frames_s = [20, 90],
     sample_frequency_s = [1/10.],
     n_epochs = [300]
     )
