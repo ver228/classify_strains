@@ -77,7 +77,10 @@ def accuracy(output, target, topk=(1,)):
         res.append(correct_k.mul_(100.0 / batch_size))
     
     #calculate the global f1 score
-    f1 = f1_score(target.data.numpy(), pred.data[0].numpy(), average='micro')
+    #prefer to use scikit instead of having to program it again in torch
+    ytrue = target.data.cpu().numpy()
+    ypred = pred.data[0].cpu().numpy()
+    f1 = f1_score(ytrue, ypred, average='micro')
     return res, f1
 
 def save_checkpoint(state, is_best, save_dir, filename='checkpoint.pth.tar'):
