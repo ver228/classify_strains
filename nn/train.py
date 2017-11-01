@@ -253,6 +253,11 @@ def main(
         is_reduced = False
         ):
     #%%
+    if is_CeNDR:
+        dataset_str = 'CeNDR'
+    else:
+        dataset_str = 'SWDB'
+    
     
     if sys.platform == 'linux':
         log_dir_root = '/work/ajaver/classify_strains/results'
@@ -260,13 +265,10 @@ def main(
     else:        
         log_dir_root = '/Users/ajaver/OneDrive - Imperial College London/classify_strains/logs/'
         data_dir = '/Users/ajaver/OneDrive - Imperial College London/classify_strains/train_data/'
-
-    if is_CeNDR:
-        data_file =  os.path.join(data_dir, 'CeNDR', 'CeNDR_skel_smoothed.hdf5')
-        bn_prefix = 'CeNDR_'
-    else:
-        data_file = os.path.join(data_dir, 'SWDB', 'SWDB_skel_smoothed.hdf5')
-        bn_prefix = 'SWDB_'
+        data_dir = os.path.join(data_dir,dataset_str)
+        
+    data_file =  os.path.join(data_dir, dataset_str + '_skel_smoothed.hdf5')
+    bn_prefix = dataset_str + '_'
     
     valid_strains = None
     if is_reduced:
@@ -323,7 +325,6 @@ def main(
         model.cuda()
         criterion.cuda()
         model = nn.parallel.DistributedDataParallel(model)
-    
     
     t = Trainer(model,
              optimizer,
