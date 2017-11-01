@@ -332,8 +332,7 @@ def main(
         torch.backends.cudnn.benchmark = True #useful for arrays of fix dimension
         model.cuda()
         criterion.cuda()
-        model = nn.parallel.DistributedDataParallel(model)
-    
+        
     t = Trainer(model,
              optimizer,
              criterion,
