@@ -330,8 +330,8 @@ def main(
     if IS_CUDA:
         print('This is CUDA!!!!')
         torch.backends.cudnn.benchmark = True #useful for arrays of fix dimension
-        model.cuda()
-        criterion.cuda()
+        model = model.cuda()
+        criterion = criterion.cuda()
         
     t = Trainer(model,
              optimizer,
