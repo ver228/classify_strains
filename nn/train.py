@@ -236,8 +236,8 @@ class Trainer(object):
         Yt = torch.from_numpy(Y).long()
         
         if IS_CUDA:
-            Xt.cuda()
-            Yt.cuda()
+            Xt = Xt.cuda()
+            Yy = Yt.cuda()
             
         input_var = autograd.Variable(Xt)
         target_var = autograd.Variable(Yt)
@@ -300,13 +300,17 @@ def main(
                            n_batch = n_batch, 
                            set_type = 'train',
                            valid_strains = valid_strains,
-                           is_angle = is_angle
+                           is_angle = is_angle,
+                           sample_size_frames_s = sample_size_frames_s,
+                           sample_frequency_s = sample_frequency_s
                            )
     test_generator = SkeletonsFlow(data_file = data_file, 
                            n_batch = n_batch, 
                            set_type = 'test',
                            valid_strains = valid_strains,
-                           is_angle = is_angle
+                           is_angle = is_angle,
+                           sample_size_frames_s = sample_size_frames_s,
+                           sample_frequency_s = sample_frequency_s
                            )
     
     X,Y = next(train_generator)
