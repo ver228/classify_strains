@@ -276,6 +276,8 @@ def main(
     data_file =  os.path.join(data_dir, dataset_str + '_skel_smoothed.hdf5')
     bn_prefix = dataset_str + '_'
     
+    print(data_file)
+    
     valid_strains = None
     if is_reduced:
         if is_CeNDR:
