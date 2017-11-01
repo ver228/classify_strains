@@ -13,11 +13,9 @@ import math
 import numpy as np
 import shutil
 
-
-import torch
-import tqdm
 import tensorflow as tf
 import time
+import datetime
 
 from sklearn.metrics import f1_score
 
@@ -184,9 +182,11 @@ class Trainer(object):
             model.eval()
         
         
+        print('Starting epoch {} ...'.format(self.epoch))
         batch_per_epoch = self._h_get_n_batch(gen)
-        pbar = tqdm.trange(batch_per_epoch)
-        for step in pbar:
+        start = time.time()
+        for step in range(batch_per_epoch):
+            step_start = time.time()
             input_var, target_var = self._h_transform_func(next(gen))
             
             output = model(input_var)
@@ -209,10 +209,16 @@ class Trainer(object):
             
             (prec1, prec5), f1 = accuracy(output, target_var, topk = topk)
             iter_data = (self.epoch, loss.data[0], prec1.data[0], prec5.data[0], f1)
-            str_d = 'Epoch: %i [Loss: %.4f, Acc: @1 %.2f | @5 %.2f, F1: %.2f]' % iter_data
+            str_d = 'Epoch: %i [Loss: %.4f, Pred@1: %.2f, Pred@5: %.2f, F1: %.2f]' % iter_data
             if not is_train:
                 str_d = 'Val ' + str_d
-            pbar.set_description(str_d)
+            
+            total_time = datetime.timedelta(seconds=round(time.time() - start))
+            step_time = time.time() - step_start
+            str_d += '{}/{} [{} {:.1f} | it/s]'.format(step, batch_per_epoch, total_time, step_time)
+            
+            print(str_d)
+            
             
             log_data.append(iter_data[1:])
         
@@ -345,13 +351,13 @@ if __name__ == '__main__':
   import fire
   fire.Fire(main)    
   
-#  main(model_type = 'resnet50',
+#  main(model_type = 'gru',
 #       sample_size_frames_s = sample_size_frames_s_dflt,
 #        sample_frequency_s = sample_frequency_s_dflt,
 #        n_epochs = 2,
 #        n_batch_base = 32,
 #        batch_per_epoch = 3,
 #        is_angle = True,
-#        is_CeNDR = True,
+#        is_CeNDR = False,
 #        is_reduced = True
 #        )
