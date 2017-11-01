@@ -237,7 +237,7 @@ class Trainer(object):
         
         if IS_CUDA:
             Xt = Xt.cuda()
-            Yy = Yt.cuda()
+            Yt = Yt.cuda()
             
         input_var = autograd.Variable(Xt)
         target_var = autograd.Variable(Yt)
