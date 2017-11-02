@@ -154,9 +154,9 @@ class Trainer(object):
                     'train_pred1':train_pred1, 
                     'train_pred5':train_pred5, 
                     'train_f1':train_f1,
-                    'test_loss':train_loss, 
-                    'test_pred1':train_pred1, 
-                    'test_pred5':train_pred5,
+                    'test_loss':test_loss, 
+                    'test_pred1':test_pred1, 
+                    'test_pred5':test_pred5,
                     'test_f1':test_f1
                     }
             
