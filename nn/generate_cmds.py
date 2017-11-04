@@ -32,7 +32,7 @@ cp $WORK/classify_strains/train_set/{train_file} $TMPDIR/
 '''
 
 if __name__ == '__main__':
-    save_dir = './cmd_scripts/grid_011117'
+    save_dir = './cmd_scripts/grid_041117'
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
     
@@ -41,13 +41,13 @@ if __name__ == '__main__':
     main_file = '$HOME/classify_strains/nn/train.py'
     
     params_grid = OrderedDict(
-    model_type = ['resnet50', 'gru', 'lstm'],
+    model_type = ['resnet50', 'gru'],
+    sample_size_frames_s = [10, 90],
+    sample_frequency_s = [1/25.],
     is_CeNDR = [True, False],
+    is_reduced = [True],
     is_angle = [True],
-    is_reduced = [True, False],
-    sample_size_frames_s = [20, 90],
-    sample_frequency_s = [1/10.],
-    n_epochs = [300]
+    n_epochs = [3000]
     )
     
     short_add = dict(
