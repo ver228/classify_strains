@@ -10,6 +10,7 @@ import tables
 import numpy as np
 import random
 import time
+import math
 import warnings
 
 #wild isolates used to test SWDB
@@ -87,9 +88,11 @@ class SkeletonsFlow():
         
         
         #filter the chucks of continous skeletons to have at least the required sample size
-        good = skeletons_ranges.apply(lambda x : x['fps']*(x['fin'] - x['ini']) >= self.sample_size_frames_s, axis=1)
+        good = skeletons_ranges.apply(lambda x : math.floor((x['fin'] - x['ini'])/x['fps']) >= self.sample_size_frames_s, axis=1)
         skeletons_ranges = skeletons_ranges[good]
         
+
+
         if set_type is not None:
             assert set_type in ['train', 'test', 'val']
             with tables.File(self.data_file, 'r') as fid:
@@ -130,10 +133,13 @@ class SkeletonsFlow():
         
         while True:
             try:
+                u_rows, u_ind = np.unique(row_indices, return_inverse=True)
                 #read data. I use a while to protect from fails of data
                 with tables.File(self.data_file, 'r') as fid:
-                    skeletons = fid.get_node('/skeletons_data')[row_indices, :, :]
-                    break
+                    skeletons = fid.get_node('/skeletons_data')[u_rows, :, :]
+                skeletons = skeletons[u_ind]
+
+                break
             except KeyError: 
                 print('There was an error reading the file, I will try again...')
                 time.sleep(1)

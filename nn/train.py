@@ -20,7 +20,7 @@ import datetime
 from sklearn.metrics import f1_score
 
 from model_resnet import ResNetS, Bottleneck
-from model_rnn import RNNModel
+from model_rnn import RNNModel, RNNResnet
 
 
 from skeletons_flow import SkeletonsFlow, CeNDR_DIVERGENT_SET, SWDB_WILD_ISOLATES
@@ -56,7 +56,13 @@ def _h_get_model(num_classes, model_type, n_channels=1):
                hidden_size = 256, 
                nlayers = 3
                )
-        
+    elif model_type == 'WRes50':
+        model = RNNResnet(rnn_type = 'GRU',
+                   num_classes = num_classes, 
+                   conv_window = 250, 
+                   hidden_size = 256, 
+                   nlayers = 3
+                   )
     else:
         raise ValueError(model_type)
 
