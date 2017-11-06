@@ -102,12 +102,12 @@ class RNNResnet(nn.Module):
         
         if hidden is None:
             hidden = self.init_hidden(X_c.size(0))
-        X_R, _ = self.rnn(X_c, hidden)  
+        X_R, hidden_r = self.rnn(X_c, hidden)  
         X_R = self.drop(X_R)
         
         # Decode hidden state of last time step
         out  = self.fc(X_R[:, -1, :])
-        return out
+        return out, hidden_r
 
 if __name__ == '__main__':
     mod = RNNModel(rnn_type = 'GRU',

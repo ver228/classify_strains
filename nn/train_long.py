@@ -36,37 +36,7 @@ if IS_CUDA:
 sample_size_frames_s_dflt = 90.
 sample_frequency_s_dflt = 1/10
 
-def _h_get_model(num_classes, model_type, n_channels=1):
-    
-    if model_type == 'resnet50':
-        model = ResNetS(Bottleneck, [3, 4, 6, 3], n_channels=1, num_classes = num_classes)
-    
-    elif model_type == 'lstm':
-        model = RNNModel('LSTM',
-               num_classes = num_classes, 
-               input_size = 48, 
-               hidden_size = 256, 
-               nlayers = 3
-               )
-    
-    elif model_type == 'gru':
-        model = RNNModel('GRU',
-               num_classes = num_classes, 
-               input_size = 48, 
-               hidden_size = 256, 
-               nlayers = 3
-               )
-    elif model_type == 'WRes50':
-        model = RNNResnet(rnn_type = 'GRU',
-                   num_classes = num_classes, 
-                   conv_window = 250, 
-                   hidden_size = 256, 
-                   nlayers = 3
-                   )
-    else:
-        raise ValueError(model_type)
 
-    return model
 
 def accuracy(output, target, topk=(1,)):
     """Computes the precision@k for the specified values of k"""
@@ -122,6 +92,7 @@ class Trainer(object):
                  ):
         
         self.model = model
+        self.conv_window = model.conv_window
         self.optimizer = optimizer
         self.criterion = criterion
         self.train_generator = train_generator
@@ -138,10 +109,10 @@ class Trainer(object):
     def fit(self):
         best_prec1 = 0
         for self.epoch in range(1, self.n_epochs + 1):
-            t_log_data = self._h_epoch(self.model, is_train = True)
+            t_log_data = self._h_epoch_train()
             train_loss, train_pred1, train_pred5, train_f1 = map(np.mean, zip(*t_log_data))
             
-            v_log_data = self._h_epoch(self.model, is_train = False)
+            v_log_data = self._h_epoch_test()
             test_loss, test_pred1, test_pred5, test_f1 = map(np.mean, zip(*v_log_data))
             
             is_best = test_pred1 > best_prec1
@@ -176,19 +147,11 @@ class Trainer(object):
             batch_per_epoch = self.batch_per_epoch
         return batch_per_epoch
     
-    def _h_epoch(self,
-                 model,
-                 is_train,
-                 topk = (1, 5)
-                 ):
+    def _h_epoch_val(self):
         
         log_data = []
-        if is_train:
-            gen = self.train_generator
-            model.train()
-        else:
-            gen = self.test_generator
-            model.eval()
+        gen = self.test_generator
+        self.model.eval()
         
         
         print('Starting epoch {} ...'.format(self.epoch))
@@ -198,9 +161,42 @@ class Trainer(object):
             step_start = time.time()
             input_var, target_var = self._h_transform_func(next(gen))
             
-            output = model(input_var)
+            output = self.model(input_var)
             loss = self.criterion(output, target_var)
-            if is_train:
+            
+            (prec1, prec5), f1 = accuracy(output, target_var, topk = (1, 5))
+            iter_data = (self.epoch, loss.data[0], prec1.data[0], prec5.data[0], f1)
+            str_d = 'Epoch: %i [Loss: %.4f, Pred@1: %.2f, Pred@5: %.2f, F1: %.2f]' % iter_data
+            str_d = 'Val ' + str_d
+            
+            total_time = datetime.timedelta(seconds=round(time.time() - start))
+            step_time = time.time() - step_start
+            str_d += '{}/{} [{} {:.1f} | it/s]'.format(step, batch_per_epoch, total_time, step_time)
+            print(str_d)
+            
+            log_data.append(iter_data[1:])
+        
+        return log_data
+    
+    def _h_epoch_train(self):
+        log_data = []
+        gen = self.train_generator
+        self.model.train()
+        
+        
+        print('Starting epoch {} ...'.format(self.epoch))
+        batch_per_epoch = self._h_get_n_batch(gen)
+        start = time.time()
+        for step in range(batch_per_epoch):
+            step_start = time.time()
+            input_var, target_var = self._h_transform_func(next(gen))
+            
+            
+            hidden = self.model.init_hidden(n_batch)
+            for tt in range(0, n_frames - self.conv_window+1, self.conv_window//2):
+                x = input_var[..., tt:tt + self.conv_window, :]
+                output, hidden = self.model(x, hidden)
+                loss = self.criterion(output, target_var)
                 # Before the backward pass, use the optimizer object to zero all of the
                 # gradients for the variables it will update (which are the learnable weights
                 # of the model)
@@ -209,25 +205,20 @@ class Trainer(object):
                 # gradient of loss with respect to all Variables with requires_grad=True.
                 # After this call w1.grad and w2.grad will be Variables holding the gradient
                 # of the loss with respect to w1 and w2 respectively.
-                loss.backward()
-                
+                loss.backward(retain_graph=True)
                 # `clip_grad_norm` helps prevent the exploding gradient problem in RNNs / LSTMs.
                 torch.nn.utils.clip_grad_norm(model.parameters(), 0.25)
-                
-                self.optimizer.step()
             
-            (prec1, prec5), f1 = accuracy(output, target_var, topk = topk)
+                self.optimizer.step()
+                
+            (prec1, prec5), f1 = accuracy(output, target_var, topk = (1, 5))
             iter_data = (self.epoch, loss.data[0], prec1.data[0], prec5.data[0], f1)
             str_d = 'Epoch: %i [Loss: %.4f, Pred@1: %.2f, Pred@5: %.2f, F1: %.2f]' % iter_data
-            if not is_train:
-                str_d = 'Val ' + str_d
             
             total_time = datetime.timedelta(seconds=round(time.time() - start))
             step_time = time.time() - step_start
             str_d += '{}/{} [{} {:.1f} | it/s]'.format(step, batch_per_epoch, total_time, step_time)
-            
             print(str_d)
-            
             
             log_data.append(iter_data[1:])
         
@@ -256,17 +247,20 @@ class Trainer(object):
 
 
 
-def main(
-        model_type,
-        sample_size_frames_s = sample_size_frames_s_dflt,
-        sample_frequency_s = sample_frequency_s_dflt,
-        n_epochs = 100,
-        n_batch_base = 32,
-        batch_per_epoch = None,
-        is_angle = False,
-        is_CeNDR = False,
-        is_reduced = False
-        ):
+if __name__ == '__main__':
+    model_type = 'WRes50'
+    sample_size_frames_s = 90
+    sample_frequency_s = 0.04
+    n_epochs = 1000
+    n_batch_base = 64
+    batch_per_epoch = None
+    is_angle = True
+    is_CeNDR = True
+    is_reduced = True
+    
+    conv_window = 250
+    hidden_size = 256
+    nlayers = 3
     #%%
     if is_CeNDR:
         dataset_str = 'CeNDR'
@@ -324,9 +318,15 @@ def main(
     
     X,Y = next(train_generator)
     num_classes = Y.shape[1]
+    n_frames = X.shape[1]
     #%%
     
-    model = _h_get_model(num_classes, model_type = model_type)
+    model = RNNResnet(rnn_type = 'GRU',
+                   num_classes = num_classes, 
+                   conv_window = conv_window, 
+                   hidden_size = 256, 
+                   nlayers = 3
+                   )
     
     base_name = model_type + '_' + bn_prefix
     base_name = '{}_S{}_F{:.2}'.format(base_name, sample_size_frames_s, sample_frequency_s)
@@ -335,6 +335,7 @@ def main(
     print(model)  
     print(list(train_generator.skeletons_ranges['strain'].unique()))
     print(train_generator.n_batch)
+    
     
     #%%
     criterion = nn.CrossEntropyLoss()
@@ -358,9 +359,9 @@ def main(
              )
     t.fit()
 
-if __name__ == '__main__':
-  import fire
-  fire.Fire(main)    
+#if __name__ == '__main__':
+#  import fire
+#  fire.Fire(main)    
   
 #  main(model_type = 'gru',
 #       sample_size_frames_s = sample_size_frames_s_dflt,
