@@ -139,6 +139,9 @@ def _process_file(features_file, fps, gap_to_interp_seconds, sample_size_frames_
             skeletons = fid.get_node('/coordinates/skeletons')[skel_ids]
         
         is_bad_skeleton = np.isnan(skeletons[:, 0, 0])
+        
+        
+        
         if np.any(is_bad_skeleton):
             
             wormN = SmoothedWorm(skeletons,

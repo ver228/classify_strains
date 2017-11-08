@@ -64,7 +64,7 @@ if __name__ == '__main__':
     MAX_FRAC_NAN = 0.25
     
     
-    MIN_N_VIDEOS, save_dir, feat_files = _get_args('SWDB')
+    MIN_N_VIDEOS, save_dir, feat_files = _get_args('CeNDR')
     
 
     
@@ -79,7 +79,7 @@ if __name__ == '__main__':
         feats = feats[[x for x in feats if x not in col2remove]]
         all_features[db_name] = feats
     
-    assert (all_features['OW']['base_name'] == all_features['tierpsy']['base_name']).all()
+    assert (all_features['OW']['base_name'].values == all_features['tierpsy']['base_name'].values).all()
     
     #%%
     dd = all_features['OW']['strain'].value_counts()
@@ -168,4 +168,8 @@ if __name__ == '__main__':
         bn = feat_files[db_name]
         fname = os.path.join(save_dir, 'F_' + bn)
         feats.to_csv(fname)
+    
+    #%%
+    
+    
     

@@ -2,3 +2,11 @@
 *.pyc
 
 nn/cmd_scripts
+
+*.npy
+
+*.pdf
+
+*.pkl
+
+*.png
