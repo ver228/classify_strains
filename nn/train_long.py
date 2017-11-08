@@ -252,7 +252,7 @@ if __name__ == '__main__':
     sample_size_frames_s = 90
     sample_frequency_s = 0.04
     n_epochs = 1000
-    n_batch_base = 64
+    n_batch_base = 32
     batch_per_epoch = None
     is_angle = True
     is_CeNDR = True
