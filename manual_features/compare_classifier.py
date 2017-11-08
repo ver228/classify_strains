@@ -15,6 +15,7 @@ import random
 import itertools
 import multiprocessing as mp
 
+import time
 import matplotlib.pylab as plt
 from sklearn.metrics import confusion_matrix
 
@@ -78,7 +79,7 @@ def _get_args(set_type):
                          'LSJ1', 'JU258', 'MY16', 
                          'CB4852', 'CB4856', 'CB4853',
                          ]
-        main_file = '/Users/ajaver/OneDrive - Imperial College London/classify_strains/train_data/SWDB/SWDB_skel_smoothed_v2.hdf5'
+        main_file = '/Users/ajaver/OneDrive - Imperial College London/classify_strains/train_data/SWDB/SWDB_skel_smoothed.hdf5'
         save_dir = '/Users/ajaver/OneDrive - Imperial College London/classify_strains/manual_features/SWDB/'
         feat_files = {
                 'OW_old' : 'ow_features_old_SWDB.csv',
@@ -88,7 +89,7 @@ def _get_args(set_type):
     return cross_validation_fold, base_strains, main_file, save_dir, feat_files
 
 def _h_cross_validate(args):
-    feats_r, col_feats, id_index_str, n_samples, cross_validation_fold = args
+    feats_r, col_feats, id_index_str, n_samples, cross_validation_fold, n_estimators = args
     ss = feats_r.groupby('strain').apply(lambda x :x.iloc[random.sample(range(0,len(x)), n_samples)])
     xx = ss[col_feats].values
     
@@ -98,7 +99,7 @@ def _h_cross_validate(args):
     
     yy = ss[id_index_str].values
     
-    clf = RandomForestClassifier(n_estimators=1000)
+    clf = RandomForestClassifier(n_estimators=n_estimators)
     scores = cross_val_score(clf, xx, yy, cv = cross_validation_fold)
     #print(scores)
     return scores
@@ -106,8 +107,10 @@ def _h_cross_validate(args):
 
 
 if __name__ == '__main__':
-    cross_validation_fold, base_strains, main_file, save_dir, feat_files = _get_args('CeNDR')
+    cross_validation_fold, base_strains, main_file, save_dir, feat_files = _get_args('SWDB')
     
+    
+    feat_files = {'OW_old':feat_files['OW_old']}
     #%%
     
     with pd.HDFStore(main_file, 'r') as fid:
@@ -151,34 +154,101 @@ if __name__ == '__main__':
         
     col2ignore_r = col2ignore + ['strain_base_id', 'strain_id', 'set_type']
     #%%
+    if False:
+        n_trials = 200
+        
+        n_batch= mp.cpu_count()
+        p = mp.Pool(n_batch)
+        
+        id_index_str = 'strain_base_id'
+        
+        cross_val_results = {}
+        
+        start = time.time()
+        for db_name, feats in feat_data.items():
+            print(db_name)
+            
+            
+            col_feats = [x for x in feats.columns if x not in col2ignore_r]
+            good = ~feats['strain_base_id'].isnull() & (feats['set_type'] == 'train')
+            feats_r = feats[good]
+            
+            n_samples = feats_r['strain'].value_counts().min()
+            args = feats_r, col_feats, id_index_str, n_samples, cross_validation_fold, 1000
+            
+            #func = partial(_h_cross_validate, )
+            scores = list(p.map(_h_cross_validate, n_trials*[args]))
+            scores = np.concatenate(scores)
+            #scores = _h_cross_validate(feats_r, col_feats, id_index_str, n_samples, cross_validation_fold)
+        
+            print("%s Accuracy: %0.2f (+/- %0.2f)" % (db_name, scores.mean(), scores.std() * 2))    
+            cross_val_results[db_name] = scores
+            
+            
+            print(time.time() - start)
     
-    n_trials = 200
     
+    #%%
     n_batch= mp.cpu_count()
     p = mp.Pool(n_batch)
     
     id_index_str = 'strain_base_id'
     
     cross_val_results = {}
+    
+    
     for db_name, feats in feat_data.items():
         print(db_name)
-        
         
         col_feats = [x for x in feats.columns if x not in col2ignore_r]
         good = ~feats['strain_base_id'].isnull() & (feats['set_type'] == 'train')
         feats_r = feats[good]
         
         n_samples = feats_r['strain'].value_counts().min()
-        args = feats_r, col_feats, id_index_str, n_samples, cross_validation_fold
         
-        #func = partial(_h_cross_validate, )
         
-        scores = list(p.map(_h_cross_validate, n_trials*[args]))
-        scores = np.concatenate(scores)
-        #scores = _h_cross_validate(feats_r, col_feats, id_index_str, n_samples, cross_validation_fold)
+        selected_feats = []
+        
+        for n_feat in range(30):
+            n_trials = 20
+            
+            all_scores = []
+            for iif, ff in enumerate(col_feats):
+                if ff in selected_feats:
+                    continue
+                
+                start = time.time()
+                c_feats = selected_feats + [ff]
+                
+                args = feats_r, c_feats, id_index_str, n_samples, cross_validation_fold, 150
+                #func = partial(_h_cross_validate, )
+                scores = list(p.map(_h_cross_validate, n_trials*[args]))
+                scores = np.concatenate(scores)
+                #scores = _h_cross_validate(feats_r, col_feats, id_index_str, n_samples, cross_validation_fold)
+                
+                print(len(c_feats), iif+1, len(col_feats),  c_feats)
+                print("%s Accuracy: %0.2f (+/- %0.2f)" % (db_name, scores.mean(), scores.std() * 2)) 
+                print(scores.min(), scores.max(), scores.mean() - 2*scores.std())
+                all_scores.append((c_feats, scores))
+                
+                print(time.time() - start)
+            
+            selected_feats = max(all_scores, key=lambda x : x[1].mean() - 2*x[1].std())[0]
+            with open('/Users/ajaver/OneDrive - Imperial College London/classify_strains/manual_features/SWDB/best_feats_OW.txt', 'a+') as fid:
+                fid.write(', '.join(selected_feats) + '\n')
+    #%%
+    n_trials = 200
+    args = feats_r, selected_feats, id_index_str, n_samples, cross_validation_fold, 1000
+    #func = partial(_h_cross_validate, )
+    scores = list(p.map(_h_cross_validate, n_trials*[args]))
+    scores = np.concatenate(scores)
+    #scores = _h_cross_validate(feats_r, col_feats, id_index_str, n_samples, cross_validation_fold)
+
+    print("%s Accuracy: %0.2f (+/- %0.2f)" % (db_name, scores.mean(), scores.std() * 2))    
+    cross_val_results[db_name] = scores
     
-        print("%s Accuracy: %0.2f (+/- %0.2f)" % (db_name, scores.mean(), scores.std() * 2))    
-        cross_val_results[db_name] = scores
+    print(time.time() - start)    
+    print(selected_feats)        
     #%%
     '''
     SWDB

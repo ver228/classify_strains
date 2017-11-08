@@ -155,7 +155,7 @@ def collect_skeletons(experiments_df,
                       main_file,  
                       file_ext = '_featuresN.hdf5',
                       gap_to_interp_seconds = 3, 
-                      sample_size_frames_s = 90
+                      sample_size_frames_s = 10
                       ):    
     
     assert all(x in experiments_df for x in ('directory', 'base_name', 'fps', 'id', 'strain'))

@@ -147,7 +147,7 @@ class Trainer(object):
             batch_per_epoch = self.batch_per_epoch
         return batch_per_epoch
     
-    def _h_epoch_val(self):
+    def _h_epoch_test(self):
         
         log_data = []
         gen = self.test_generator
