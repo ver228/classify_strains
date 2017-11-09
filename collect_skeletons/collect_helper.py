@@ -11,9 +11,10 @@ import pandas as pd
 import tables
 import random
 
-
 from tierpsy.helper.misc import TimeCounter
 from tierpsy_features.smooth import get_group_borders, SmoothedWorm
+
+import tqdm
 
 # pytables filters.
 TABLE_FILTERS = tables.Filters(
@@ -129,8 +130,8 @@ def _process_file(features_file, fps, gap_to_interp_seconds, sample_size_frames_
     with pd.HDFStore(features_file, 'r') as fid:
         timestamp_data = fid['/timeseries_data']
     
-    
-    for worm_index, worm_data in timestamp_data.groupby('worm_index'):
+    gg = timestamp_data.groupby('worm_index')
+    for worm_index, worm_data in gg:
         if worm_data.shape[0] < sample_size_frames:
             continue
         
@@ -212,9 +213,9 @@ def collect_skeletons(experiments_df,
                                         expectedrows = experiments_df.shape[0]*22500,
                                         filters = TABLE_FILTERS)
         
-        timer = TimeCounter(tot_frames = len(experiments_df))
+        #timer = TimeCounter(tot_frames = len(experiments_df))
         tot_skels = 0
-        for irow, row in experiments_df.iterrows():
+        for irow, row in tqdm.tqdm(experiments_df.iterrows(), total=len(experiments_df)):
             try:
                 features_file = os.path.join(row['directory'], row['base_name'] + file_ext)
                 with pd.HDFStore(features_file, 'r') as fid:
@@ -254,7 +255,7 @@ def collect_skeletons(experiments_df,
                 skeletons_data.flush()
                 
            
-            print(timer.get_str(irow+1))
+            #print(timer.get_str(irow+1))
     
     #SAVE STRAIN CODES
     #I am reading the skeletons_group instead of the experiment data, to ignore strains without a valid skeleton

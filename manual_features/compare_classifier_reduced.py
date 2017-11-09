@@ -174,7 +174,7 @@ if __name__ == '__main__':
     p = mp.Pool(n_batch)
     
     col_feats = [x for x in feats.columns if x not in col2ignore_r]
-    good = ~feats['strain_base_id'].isnull() & (feats['set_type'] == 'train')
+    good = ~feats['strain_base_id'].isnull()
     feats_r = feats[good]
     
     n_samples = feats_r['strain'].value_counts().min()

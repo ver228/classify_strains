@@ -12,6 +12,10 @@ import numpy as np
 import matplotlib.pylab as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
+import pandas as pd
+import tqdm
+from calculate_PCA import _h_angles#, main_dir
+
 from tierpsy_features import EIGEN_PROJECTION_FILE
 
 
@@ -54,9 +58,6 @@ if False:
             plt.close()
         
 
-import pandas as pd
-import tqdm
-from calculate_PCA import _h_angles#, main_dir
 
 #set_type = 'CeNDR'
 set_type = 'SWDB'
@@ -88,10 +89,9 @@ for i_strain, (strain, dat) in enumerate(skel_g):
             
             ini = row['ini']
             fin = row['fin']
-            is_bad_skeleton = is_bad_node[ini:fin+1]
-            
-            valid_ind = np.where(is_bad_skeleton==0)[0] + ini
-            aa = _h_angles(skel_node[valid_ind, :, :])
+            is_bad_skeleton = is_bad_node[ini:fin+1] > 0
+            skels = skel_node[ini:fin+1, :, :]
+            aa = _h_angles(skels[~is_bad_skeleton])
             
             angs[tot:tot+aa.shape[0]] = aa
             tot += aa.shape[0]
@@ -133,3 +133,15 @@ pdf.close()
 #%%
 with open('PCA_errors_{}.pkl'.format(set_type), 'wb') as fid:
     pickle.dump(all_errors, fid)
+#%%
+with PdfPages('PCA_errors_{}_all.pdf'.format(set_type), 'a') as pdf:
+
+    fig = plt.figure(figsize=(12, 6))
+    for ii, nn in enumerate(n_components):
+        plt.subplot(2,4, ii+1)
+        plt.plot(np.vstack([x[ii] for x in all_errors.values()]).T)
+        plt.ylim([0, 0.3])
+        plt.title('{} PC'.format(nn))
+        plt.xlim((-1, 49))
+    plt.suptitle('ALL')
+    pdf.savefig(fig)
