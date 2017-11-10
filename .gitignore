@@ -1,12 +1,6 @@
 
 *.pyc
 
-nn/cmd_scripts
+nn/cmd_scripts/
 
-*.npy
-
-*.pdf
-
-*.pkl
-
-*.png
+manual_features/pca/results/

@@ -4,16 +4,16 @@
 Created on Tue Aug 29 09:20:28 2017
 @author: ajaver
 
-#add modifications of Andreas
+#add modifications by Andreas
 
 """
 import random
 import time
-import warnings
-
 import numpy as np
 import pandas as pd
 import tables
+from skeletons_transform import get_skeleton_transform, check_valid_transform
+
 
 # wild isolates used to test SWDB
 SWDB_WILD_ISOLATES = ['JU393', 'ED3054', 'JU394',
@@ -29,27 +29,9 @@ CeNDR_DIVERGENT_SET = ['N2', 'ED3017', 'CX11314', 'LKC34', 'MY16', 'DL238',
                        'JT11398', 'JU775',
                        'JU258', 'MY23', 'EG4725', 'CB4856']
 
-def _h_angles(skeletons):
-    '''
-    Get skeletons angles
-    '''
-    dd = np.diff(skeletons, axis=1)
-    angles = np.arctan2(dd[..., 0], dd[..., 1])
-
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        angles = np.unwrap(angles, axis=1)
-
-    mean_angles = np.mean(angles, axis=1)
-    angles -= mean_angles[:, None]
-
-    return angles, mean_angles
-
-
-def _h_eigenworms(angles, eigenvalues):
-    return np.dot(angles, eigenvalues.T)
-
-
+# normalize
+#angles = angles/np.pi/2
+#skeletons = skeletons/500 (250 - 1000)
 
 class SkeletonsFlow():
     def __init__(self,
@@ -60,17 +42,20 @@ class SkeletonsFlow():
                  valid_strains=None,
                  sample_size_frames_s=90,
                  sample_frequency_s=1 / 10,
-                 is_angle=False,
+                 transform_type = 'angles',
+                 is_normalize = False,
                  shuffle=True
                  ):
+
+        check_valid_transform(transform_type)
 
         self.n_batch = n_batch
         self.sample_size_frames_s = sample_size_frames_s
         self.sample_frequency_s = sample_frequency_s
         self.n_samples = int(round(sample_size_frames_s / sample_frequency_s))
         self.data_file = data_file
-        self.body_range = (8, 41)
-        self.is_angle = is_angle
+        self.transform_type = transform_type
+        self.is_normalize = is_normalize
         self.shuffle = shuffle
         # Only used when suffle == False.
         self.skeleton_id = -1
@@ -159,14 +144,10 @@ class SkeletonsFlow():
             # if there are nan we might have a bug... i am not sure how to solve it...
             raise ValueError('NaNs in skeletons data.')
 
-        body_coords = np.mean(
-            skeletons[:, self.body_range[0]:self.body_range[1] + 1, :], axis=1)
-        skeletons -= body_coords[:, None, :]
-
-        if self.is_angle:
-            skeletons, _ = _h_angles(skeletons)
-            skeletons = skeletons[..., None]
-
+        skeletons = get_skeleton_transform(skeletons, 
+                                           transform_type = self.transform_type,
+                                           is_normalized=self.is_normalized)
+        
         return skeletons
 
     def _random_choice(self):
@@ -226,3 +207,4 @@ class SkeletonsFlow():
 
     def __len__(self):
         return self.num_skeletons // self.n_batch
+    
