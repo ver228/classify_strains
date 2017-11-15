@@ -41,10 +41,13 @@ def test_transforms(data_file):
     
 if __name__ == '__main__':
 
-    #dataset = 'CeNDR'
-    dataset = 'SWDB'
+    dataset = 'CeNDR'
+    #dataset = 'SWDB'
     
     data_file, log_dir_root = _h_get_files(dataset)
+    data_file = data_file.replace('/CeNDR/', '/_old/')
+    
+    
     test_transforms(data_file)
     
 #%%
