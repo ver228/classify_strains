@@ -143,10 +143,10 @@ if __name__ == '__main__':
     import sys
     import torch
     
-    src_dir = os.path.join(os.path.dirname(__file__), os.pardir)
+    src_dir = os.path.join(os.path.dirname(__file__), os.pardir, 'src')
     sys.path.append(src_dir)
     
-    from classify.train import init_generator, Trainer, IS_CUDA
+    from classify.trainer import init_generator, Trainer, IS_CUDA
     
     if sys.platform == 'linux':
         log_dir_root = '/work/ajaver/classify_strains/results'

@@ -1,6 +1,4 @@
 
 *.pyc
 
-nn/cmd_scripts/
-
-manual_features/pca/results/
+src/cmd_scripts/

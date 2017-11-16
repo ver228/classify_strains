@@ -15,7 +15,7 @@ import tqdm
 import warnings
 import numpy as np
 from collections import OrderedDict
-from ..data import get_datset_file, get_valid_strains, \
+from ..flow import get_datset_file, get_valid_strains, \
                 SkeletonsFlowFull, SkeletonsFlowShuffled, IS_CUDA
 
 
