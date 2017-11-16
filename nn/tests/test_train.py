@@ -1,14 +1,13 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Code modified from https://github.com/pytorch/vision/blob/master/torchvision/models/resnet.py
+Created on Tue Nov 14 14:46:12 2017
 
+@author: ajaver
 """
-
 import torch.nn as nn
 import torch.nn.functional as F
 import math
-import tqdm
-
 
 def conv3x3(in_planes, out_planes, stride=1):
     "3x3 convolution with padding"
@@ -139,75 +138,58 @@ class ResNetS(nn.Module):
         return x
 
 if __name__ == '__main__':
+    
     import os
-    import torch
     import sys
+    import torch
     
-    
-    # add the 'src' directory as one where we can import modules
-    src_dir = os.path.join(os.path.dirname(__file__), os.pardir, 'classify_nn')
+    src_dir = os.path.join(os.path.dirname(__file__), os.pardir)
     sys.path.append(src_dir)
     
-    from data import SkeletonsFlowFull, get_valid_strains
+    from classify.train import init_generator, Trainer, IS_CUDA
     
-    models_path = '/Users/ajaver/OneDrive - Imperial College London/classify_strains/logs/model_20171103/'
-    models_names = [
-            'resnet50_R_CeNDR_ang__S10_F0.04_20171104_182812.pth.tar',
-            'resnet50_R_CeNDR_ang__S20_F0.1_20171102_210004.pth.tar',
-            'resnet50_R_CeNDR_ang__S90_F0.04_20171104_182641.pth.tar',
-            'resnet50_R_CeNDR_ang__S90_F0.1_20171102_210003.pth.tar'
-            ]
+    if sys.platform == 'linux':
+        log_dir_root = '/work/ajaver/classify_strains/results'
+    else:        
+        log_dir_root = '/Users/ajaver/OneDrive - Imperial College London/classify_strains/logs/'
+    
+
+    params = dict(
+            is_reduced = True,
+            dataset = 'SWDB',
+            data_file = None, #give the path of the .hdf5 location, otherwise it will use the defaults of my setup
+            _valid_strains = ['JU258', 'CB4856'] #use for testing
+    )
+    
+    gen_details, train_generator, test_generator = init_generator(**params)
     
     
-    n_classes = 197
+    model = ResNetS(Bottleneck, 
+                    [3, 4, 6, 3], 
+                    n_channels=train_generator.n_channels, 
+                    num_classes = train_generator.n_classes
+                    )
+    model_name = 'ResNet50'
     
-    model_name = models_names[2]
-    fname = os.path.join(models_path, model_name)
+    criterion = nn.CrossEntropyLoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+
     
-    model = ResNetS(Bottleneck, [3, 4, 6, 3], n_channels=1, num_classes = n_classes)
-    checkpoint = torch.load(fname, map_location=lambda storage, loc: storage)
-    model.load_state_dict(checkpoint['state_dict'])
-    model.eval()
+    n_epochs = 200
+    log_dir = '{}_{}'.format(model_name, gen_details)
+
+    if IS_CUDA:
+        print('This is CUDA!!!!')
+        torch.backends.cudnn.benchmark = True #useful for arrays of fix dimension
+        model = model.cuda()
+        criterion = criterion.cuda()
     
-    dataset = 'CeNDR'
-    data_file = '/Users/ajaver/OneDrive - Imperial College London/classify_strains/train_data/_old/CeNDR_skel_smoothed.hdf5'
-    #data_file = _h_get_datset_file(dataset)
-    valid_strains = get_valid_strains(dataset, is_reduced=True)
-    
-    dd = model_name.split('_')
-    sample_size_seconds = [float(x[1:]) for x in dd if x.startswith('S')][0]
-    sample_frequency_s = [float(x[1:]) for x in dd if x.startswith('F')][0]
-    
-    gen = SkeletonsFlowFull(
-                          n_batch = 32, 
-                          data_file = data_file,
-                          set_type = 'test', 
-                          sample_size_seconds = sample_size_seconds, 
-                          sample_frequency_s = sample_frequency_s,
-                          valid_strains = valid_strains,
-                          is_torch = True
-                          )
-    results = []
-    for input_v, target in tqdm.tqdm(gen):
-        output = model.forward(input_v)
-        _, pred1 = torch.max(output, 1)
-        
-        results.append((target.data.numpy(), pred1.data.numpy()))
-        
-        
-    #%%
-    #NOTE it seems that I train the models using shifting the strain_id by one...
-    #This shouldn't affect the embeddings, I'll correct it next time I train a model...
-    
-    import numpy as np
-    y_true, y_pred = map(np.concatenate, zip(*results))
-    #chunk accuracy
-    print(np.sum(y_true==y_pred-1)/y_true.size)
-    
-    #%%
-    '''
-    0.691 -> resnet50_R_CeNDR_ang__S10_F0.04_20171104_182812.pth.tar
-    0.715 -> resnet50_R_CeNDR_ang__S20_F0.1_20171102_210004.pth.tar
-    0.801 -> resnet50_R_CeNDR_ang__S90_F0.04_20171104_182641.pth.tar
-    0.791 -> resnet50_R_CeNDR_ang__S90_F0.1_20171102_210003.pth.tar
-    '''
+    t = Trainer(model,
+             optimizer,
+             criterion,
+             train_generator,
+             test_generator,
+             n_epochs,
+             log_dir
+             )
+    t.fit()

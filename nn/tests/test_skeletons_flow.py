@@ -5,9 +5,6 @@ Created on Tue Nov 14 14:46:12 2017
 
 @author: ajaver
 """
-from skeletons_flow import SkeletonsFlowShuffled, SkeletonsFlowFull
-from dataset_helper import _h_get_datset_file
-
 
 def test_transforms(data_file):
     for tt in ['angles', 'eigenworms', 'eigenworms_full', 'xy']:
@@ -27,10 +24,18 @@ def test_transforms(data_file):
            
     
 if __name__ == '__main__':
+    import os
+    import sys
+    
+    src_dir = os.path.join(os.path.dirname(__file__), os.pardir)
+    sys.path.append(src_dir)
+    
+    from classify.data import SkeletonsFlowFull, SkeletonsFlowShuffled, get_datset_file
+    
     dataset = 'CeNDR'
     #dataset = 'SWDB'
     
-    data_file = _h_get_datset_file(dataset)
+    data_file = get_datset_file(dataset)
     data_file = data_file.replace('/CeNDR/', '/_old/')
     
     #test_transforms(data_file)

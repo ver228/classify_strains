@@ -23,7 +23,7 @@ CeNDR_DIVERGENT_SET = ['N2', 'ED3017', 'CX11314', 'LKC34', 'MY16', 'DL238',
                        'JT11398', 'JU775',
                        'JU258', 'MY23', 'EG4725', 'CB4856']
 
-def _h_get_valid_strains(dataset, is_reduced):
+def get_valid_strains(dataset, is_reduced):
     if not is_reduced:
         valid_strains = None
     else:
@@ -37,7 +37,7 @@ def _h_get_valid_strains(dataset, is_reduced):
     return valid_strains
 
 
-def _h_get_datset_file(dataset):
+def get_datset_file(dataset):
     '''
     Get the localization of the dataset file. 
     Only really only used to ease the setup in the training cluster.

@@ -14,7 +14,7 @@ import pandas as pd
 import tables
 import torch
 import math
-from skeletons_transform import get_skeleton_transform, check_valid_transform
+from .skeletons_transform import get_skeleton_transform, check_valid_transform
 
 #MAYBE I SHOULD MOVE THIS TO __init__
 import os
@@ -25,7 +25,9 @@ if IS_CUDA:
     os.environ['CUDA_VISIBLE_DEVICES'] = ''
 
 class SkeletonsFlowBase():
+    
     _n_classes = None
+    _n_skeletons = None
     
     def __init__(self,
                  n_batch = 1, 
@@ -138,28 +140,42 @@ class SkeletonsFlowBase():
         return input_var, target_var
     
     def _serve_chunk(self, chunks):
-        D =  map(np.array, zip(*chunks))
+        X, Y =  map(np.array, zip(*chunks))
         if self.is_torch:
-            D = self._to_torch(*D)
+            X, Y  = self._to_torch(X, Y )
         
-        return D
+        return X, Y 
     
 
     @property
-    def num_skeletons(self):
+    def n_segments(self):
         return self.skeletons_ranges.shape[0]
+
+    @property
+    def n_skeletons(self):
+        if self._n_skeletons is None:
+            dd = self.skeletons_ranges['fin'] - self.skeletons_ranges['ini'] + 1
+            self._n_skeletons = dd.sum()
+        return self._n_skeletons
 
     @property
     def n_classes(self):
         # number of classes for the one-hot encoding
-        if not self._n_classes:
-            self._n_classes = self.strain_codes['strain_id'].max() + 1 
+        if self._n_classes is None:
+            self._n_classes = int(self.strain_codes['strain_id'].max() + 1)
         return self._n_classes
-        
-    def __len__(self):
-        return self.num_skeletons // self.n_batch
-
+    
+    @property
+    def n_channels(self):
+        if self.transform_type == 'xy':
+            return 2
+        else:
+            return 1
+    
 class SkeletonsFlowShuffled(SkeletonsFlowBase):
+    _epoch_size = None
+    _i_epoch = 0
+    
     def __init__(self, **argkws):
         super().__init__(**argkws)
         
@@ -173,9 +189,18 @@ class SkeletonsFlowShuffled(SkeletonsFlowBase):
         self.skeletons_ranges = self.skeletons_ranges[good]
         self.skel_range_grouped = self.skeletons_ranges.groupby('strain_id')
         self.strain_ids = list(map(int, self.skel_range_grouped.indices.keys()))
-        
+    
+    def __iter__(self):
+        self._i_epoch = 0
+        return self
+    
     def __next__(self):
-        chunks = [self.next_single() for n in range(self.n_batch)]
+        if self._i_epoch >= self.epoch_size:
+            raise StopIteration()
+        
+        self._i_epoch += 1
+        
+        chunks = [self._next_single() for n in range(self.n_batch)]
         skeletons, strain_ids = self._serve_chunk(chunks)
         return skeletons, strain_ids
     
@@ -217,10 +242,13 @@ class SkeletonsFlowShuffled(SkeletonsFlowBase):
         
         #read skeletons in blocks
         skeletons = self._read_skeletons(ini_r, fin_r, fps)
+        skeletons = skeletons[:self.sample_size]
+        assert skeletons.shape[0] == self.sample_size
+        
         skeletons = self._transform(skeletons)
         return skeletons
     
-    def next_single(self):
+    def _next_single(self):
         strain_id, skeletons = self._random_choice()
         if self.transform_type == 'xy':
             skeletons = self._random_transform(skeletons)
@@ -229,6 +257,20 @@ class SkeletonsFlowShuffled(SkeletonsFlowBase):
         if self.transform_type == 'xy':
             skeletons = self._random_transform(skeletons)
         return skeletons, strain_id
+
+    @property
+    def epoch_size(self):
+        #get an estimated epoch size in relation with the number of skeletons and the movies fps
+        if self._epoch_size is None:
+            fps = self.skeletons_ranges['fps'].median()
+            expected_sample_size = self.sample_size*(fps*self.sample_frequency_s)
+            self._epoch_size = self.n_skeletons/expected_sample_size/self.n_batch
+            self._epoch_size = int(math.ceil(self._epoch_size))
+        return self._epoch_size
+    
+    
+    def __len__(self):
+        return self.epoch_size
 
     
 class SkeletonsFlowFull(SkeletonsFlowBase):
