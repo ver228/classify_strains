@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 import tables
 import torch
-
+import math
 from skeletons_transform import get_skeleton_transform, check_valid_transform
 
 #MAYBE I SHOULD MOVE THIS TO __init__
@@ -235,6 +235,7 @@ class SkeletonsFlowShuffled(SkeletonsFlowBase):
     
 class SkeletonsFlowFull(SkeletonsFlowBase):
     _rows2iter = None
+    _total = None
     def __init__(self, gap_btw_samples_s = None,  **argkws):
         super().__init__(**argkws)
         self.skeleton_id = -1
@@ -242,9 +243,7 @@ class SkeletonsFlowFull(SkeletonsFlowBase):
         if gap_btw_samples_s is None:
             gap_btw_samples_s = self.sample_size_seconds/2
         self.gap_btw_samples_s = gap_btw_samples_s
-
-    
-    
+        
     def prepare_chunks(self, row):
         strain_id = row['strain_id']
         
@@ -254,8 +253,8 @@ class SkeletonsFlowFull(SkeletonsFlowBase):
         dt = int(round(self.gap_btw_samples_s*row['fps']))
         fin = skeletons.shape[0] - self.sample_size
         
-        chunks = [(skeletons_t[int(ini):int(ini) + self.sample_size], strain_id)
-            for ini in range(0, fin, dt)]
+        chunks = [(skeletons_t[tt: tt + self.sample_size], strain_id)
+            for tt in range(0, fin, dt)]
         
         return chunks
     
@@ -263,15 +262,25 @@ class SkeletonsFlowFull(SkeletonsFlowBase):
         remainder = []
         for irow, row in self.skeletons_ranges.iterrows():
             chunks = self.prepare_chunks(row)
-            chunks = remainder + chunks
-            if len(chunks) >= self.n_batch:
-                remainder = chunks[self.n_batch:]
-                chunks = chunks[:self.n_batch]
-                
+            remainder = remainder + chunks
+            while len(remainder) >= self.n_batch:
+                chunks = remainder[:self.n_batch]
+                remainder = remainder[self.n_batch:]
                 yield self._serve_chunk(chunks)
         
         if remainder:
             yield self._serve_chunk(remainder)
       
-        
-        
+    def __len__(self):
+        if self._total is None:
+            tot = 0
+            for irow, row in self.skeletons_ranges.iterrows():
+                t_size = row['fin'] - row['ini'] + 1 
+                fin = t_size - self.sample_size
+                dt = round(self.gap_btw_samples_s*row['fps'])
+                tot += math.ceil(fin/dt)
+            
+            print(tot)
+            self._total = int(math.ceil((tot/self.n_batch)))
+            
+        return self._total

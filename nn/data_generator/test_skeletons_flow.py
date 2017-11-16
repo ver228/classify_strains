@@ -39,12 +39,13 @@ if __name__ == '__main__':
     gen = SkeletonsFlowFull(
                             n_batch = 32, 
                           data_file = data_file,
-                          set_type = 'train', 
+                          set_type = 'test', 
                           sample_size_seconds = 10, 
                           sample_frequency_s=1/25.,
                           is_torch = True
                           )
-    
-    for X,Y in gen:
-        print(X.shape, Y.shape)
+    print(len(gen))
+    for ii, (X,Y) in enumerate(gen):
+        print(ii)
+        #print(ii, X.size(), Y.size())
         

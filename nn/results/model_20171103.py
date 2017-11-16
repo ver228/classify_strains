@@ -6,6 +6,8 @@ Code modified from https://github.com/pytorch/vision/blob/master/torchvision/mod
 import torch.nn as nn
 import torch.nn.functional as F
 import math
+import tqdm
+
 
 def conv3x3(in_planes, out_planes, stride=1):
     "3x3 convolution with padding"
@@ -145,7 +147,7 @@ if __name__ == '__main__':
     
     models_path = '/Users/ajaver/OneDrive - Imperial College London/classify_strains/logs/model_20171103/'
     models_names = [
-            'cp_resnet50_R_CeNDR_ang__S10_F0.04_20171104_182812.pth.tar',
+            'resnet50_R_CeNDR_ang__S10_F0.04_20171104_182812.pth.tar',
             'resnet50_R_CeNDR_ang__S20_F0.1_20171102_210004.pth.tar',
             'resnet50_R_CeNDR_ang__S90_F0.04_20171104_182641.pth.tar',
             'resnet50_R_CeNDR_ang__S90_F0.1_20171102_210003.pth.tar'
@@ -181,23 +183,21 @@ if __name__ == '__main__':
                           is_torch = True
                           )
     results = []
-    for ii, (input_v, target) in enumerate(gen):
-        print(ii)
-        
+    for input_v, target in tqdm.tqdm(gen):
         output = model.forward(input_v)
         _, pred1 = torch.max(output, 1)
         
         results.append((target.data.numpy(), pred1.data.numpy()))
         
         
-    #%%
-    #NOTE it seems that I train the models using shifting the strain_id by one...
-    #This shouldn't affect the embeddings, I'll correct it next time I train a model...
-    
-    import numpy as np
-    y_true, y_pred = map(np.concatenate, zip(*results))
-    #chunk accuracy
-    print(np.sum(y_true==y_pred-1)/y_true.size)
+#    #%%
+#    #NOTE it seems that I train the models using shifting the strain_id by one...
+#    #This shouldn't affect the embeddings, I'll correct it next time I train a model...
+#    
+#    import numpy as np
+#    y_true, y_pred = map(np.concatenate, zip(*results))
+#    #chunk accuracy
+#    print(np.sum(y_true==y_pred-1)/y_true.size)
     
     
     
