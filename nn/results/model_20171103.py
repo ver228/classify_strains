@@ -160,7 +160,7 @@ if __name__ == '__main__':
     model = ResNetS(Bottleneck, [3, 4, 6, 3], n_channels=1, num_classes = n_classes)
     checkpoint = torch.load(fname, map_location=lambda storage, loc: storage)
     model.load_state_dict(checkpoint['state_dict'])
-    
+    model.eval()
     
     dataset = 'CeNDR'
     data_file = '/Users/ajaver/OneDrive - Imperial College London/classify_strains/train_data/_old/CeNDR_skel_smoothed.hdf5'
@@ -174,68 +174,30 @@ if __name__ == '__main__':
     gen = SkeletonsFlowFull(
                           n_batch = 32, 
                           data_file = data_file,
-                          set_type = 'train', 
+                          set_type = 'test', 
                           sample_size_seconds = sample_size_seconds, 
                           sample_frequency_s = sample_frequency_s,
                           valid_strains = valid_strains,
                           is_torch = True
                           )
-    
+    results = []
     for ii, (input_v, target) in enumerate(gen):
+        print(ii)
+        
         output = model.forward(input_v)
-        _, pred0 = torch.max(output, 0)
         _, pred1 = torch.max(output, 1)
         
-        print(target.median().data[0], pred0.median().data[0], pred1.median().data[0])
+        results.append((target.data.numpy(), pred1.data.numpy()))
         
         
-        if ii > 20:
-            break
-        
-    
     #%%
+    #NOTE it seems that I train the models using shifting the strain_id by one...
+    #This shouldn't affect the embeddings, I'll correct it next time I train a model...
     
-    
-#    def transform(embedding_path, raw_data_path, model_path, batch_size=32):
-#    skeletons_data = skeletons_flow.SkeletonsFlow(batch_size, raw_data_path,
-#                                                  is_angle=True, shuffle=False)
-#
-#    model = keras.models.load_model(model_path)
-#
-#    # From looking at model.layers
-#    embedding_layer = model.layers[-3]
-#
-#    # We are not interested in the strains but the embedding, so we build a
-#    # submodel.
-#    embedding_model = keras.models.Model(model.input, embedding_layer.output)
-#
-#    embedding_data = pt.open_file(embedding_path, 'w')
-#    embeddings_array = embedding_data.create_earray(
-#        '/', 'skeleton_group_embeddings', atom=pt.Float32Atom(),
-#        shape=(0, 2048), expectedrows=skeletons_data.num_skeletons)
-#    strain_id_array = embedding_data.create_earray(
-#        '/', 'skeleton_group_strain_ids', atom=pt.Int32Atom(),
-#        shape=(0,), expectedrows=skeletons_data.num_skeletons)
-#
-#    first_batch_size = skeletons_data.num_skeletons % batch_size
-#    skeletons_data.n_batch = first_batch_size
-#
-#    with tqdm(total=skeletons_data.num_skeletons) as pbar:
-#        for batch_index, batch in enumerate(skeletons_data):
-#            batch_embeddings = embedding_model.predict(
-#                batch[0],
-#                batch_size=skeletons_data.n_batch)
-#
-#            embeddings_array.append(batch_embeddings)
-#            strain_id_array.append(batch[1])
-#
-#            if (batch_index + 1) % 10 == 0:
-#                embedding_data.flush()
-#
-#            pbar.update(skeletons_data.n_batch)
-#            skeletons_data.n_batch = batch_size
-#
-#    embedding_data.close()
+    import numpy as np
+    y_true, y_pred = map(np.concatenate, zip(*results))
+    #chunk accuracy
+    print(np.sum(y_true==y_pred-1)/y_true.size)
     
     
     
