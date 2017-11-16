@@ -156,7 +156,7 @@ if __name__ == '__main__':
     
     n_classes = 197
     
-    model_name = models_names[0]
+    model_name = models_names[2]
     fname = os.path.join(models_path, model_name)
     
     model = ResNetS(Bottleneck, [3, 4, 6, 3], n_channels=1, num_classes = n_classes)
@@ -190,14 +190,14 @@ if __name__ == '__main__':
         results.append((target.data.numpy(), pred1.data.numpy()))
         
         
-#    #%%
-#    #NOTE it seems that I train the models using shifting the strain_id by one...
-#    #This shouldn't affect the embeddings, I'll correct it next time I train a model...
-#    
-#    import numpy as np
-#    y_true, y_pred = map(np.concatenate, zip(*results))
-#    #chunk accuracy
-#    print(np.sum(y_true==y_pred-1)/y_true.size)
+    #%%
+    #NOTE it seems that I train the models using shifting the strain_id by one...
+    #This shouldn't affect the embeddings, I'll correct it next time I train a model...
+    
+    import numpy as np
+    y_true, y_pred = map(np.concatenate, zip(*results))
+    #chunk accuracy
+    print(np.sum(y_true==y_pred-1)/y_true.size)
     
     
     

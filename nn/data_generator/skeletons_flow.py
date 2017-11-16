@@ -98,7 +98,7 @@ class SkeletonsFlowBase():
                                transform_type = self.transform_type,
                                is_normalized=self.is_normalized)
     
-    def _read_skeletons(self, ini_r, fin_r):
+    def _read_skeletons(self, ini_r, fin_r, fps):
         # TODO: might be even faster to
         while True:
             try:
@@ -110,6 +110,16 @@ class SkeletonsFlowBase():
                 print(
                     'There was an error reading the file, I will try again...')
                 time.sleep(1)
+            
+        
+        # resample the skeletons to match the expected sample_frequency
+        tot = np.round(skeletons.shape[0]/(self.sample_frequency_s*fps))
+        
+        #print(tot, skeletons.shape[0])
+        ind_s = np.linspace(0, skeletons.shape[0]-1, tot)
+        ind_s = np.round(ind_s).astype(np.int32)
+        
+        skeletons = skeletons[ind_s]
         return skeletons
     
     def _to_torch(self, X, Y):
@@ -206,19 +216,7 @@ class SkeletonsFlowShuffled(SkeletonsFlowBase):
         fin_r = ini_r + sample_size_frames
         
         #read skeletons in blocks
-        skeletons = self._read_skeletons(ini_r, fin_r)
-
-        # get the expected row indexes
-        row_indices = np.linspace(0, self.sample_size_seconds,
-                                  self.sample_size) * fps
-        row_indices = np.round(row_indices).astype(np.int32)
-        skeletons = skeletons[row_indices]
-
-        if np.any(np.isnan(skeletons)):
-            print(ind, row_indices)
-            # if there are nan we might have a bug... i am not sure how to solve it...
-            raise ValueError('NaNs in skeletons data.')
-
+        skeletons = self._read_skeletons(ini_r, fin_r, fps)
         skeletons = self._transform(skeletons)
         return skeletons
     
@@ -243,18 +241,17 @@ class SkeletonsFlowFull(SkeletonsFlowBase):
         if gap_btw_samples_s is None:
             gap_btw_samples_s = self.sample_size_seconds/2
         self.gap_btw_samples_s = gap_btw_samples_s
+        self.gap_btw_samples =  int(round(gap_btw_samples_s/self.sample_frequency_s))
         
     def prepare_chunks(self, row):
         strain_id = row['strain_id']
         
-        skeletons = self._read_skeletons(row['ini'], row['fin'])
+        skeletons = self._read_skeletons(row['ini'], row['fin'], row['fps'])
         skeletons_t = self._transform(skeletons)
         
-        dt = int(round(self.gap_btw_samples_s*row['fps']))
         fin = skeletons.shape[0] - self.sample_size
-        
         chunks = [(skeletons_t[tt: tt + self.sample_size], strain_id)
-            for tt in range(0, fin, dt)]
+            for tt in range(0, fin, self.gap_btw_samples)]
         
         return chunks
     
@@ -276,11 +273,12 @@ class SkeletonsFlowFull(SkeletonsFlowBase):
             tot = 0
             for irow, row in self.skeletons_ranges.iterrows():
                 t_size = row['fin'] - row['ini'] + 1 
-                fin = t_size - self.sample_size
-                dt = round(self.gap_btw_samples_s*row['fps'])
-                tot += math.ceil(fin/dt)
+                # resample the skeletons to match the expected sample_frequency
+                n_skels = np.round(t_size/(self.sample_frequency_s*row['fps']))
+                
+                fin = n_skels - self.sample_size
+                tot += math.ceil(fin/self.gap_btw_samples)
             
-            print(tot)
             self._total = int(math.ceil((tot/self.n_batch)))
             
         return self._total
