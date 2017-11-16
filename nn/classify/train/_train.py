@@ -146,7 +146,7 @@ class Trainer(object):
             output = self.model(input_var)
             loss = self.criterion(output, target_var)
             
-            m = self.metrics(output, target_var, loss, is_train=False)
+            m = self._metrics(output, target_var, loss, is_train=False)
             all_metrics.append(m)
             pbar.set_description(self._pbar_description(m, is_train=False))
         return self._metrics_avg(all_metrics)

@@ -158,7 +158,7 @@ if __name__ == '__main__':
             is_reduced = True,
             dataset = 'SWDB',
             data_file = None, #give the path of the .hdf5 location, otherwise it will use the defaults of my setup
-            _valid_strains = ['JU258', 'CB4856'] #use for testing
+            _valid_strains = ['JU258', 'CB4856'] #use for a quick test
     )
     
     gen_details, train_generator, test_generator = init_generator(**params)
@@ -174,16 +174,14 @@ if __name__ == '__main__':
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 
-    
-    n_epochs = 200
-    log_dir = '{}_{}'.format(model_name, gen_details)
-
+    log_dir = os.path.join(log_dir_root, '{}_{}'.format(model_name, gen_details))
     if IS_CUDA:
         print('This is CUDA!!!!')
         torch.backends.cudnn.benchmark = True #useful for arrays of fix dimension
         model = model.cuda()
         criterion = criterion.cuda()
     
+    n_epochs = 200
     t = Trainer(model,
              optimizer,
              criterion,
