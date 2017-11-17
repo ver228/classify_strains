@@ -28,6 +28,7 @@ class SkeletonsFlowBase():
     
     _n_classes = None
     _n_skeletons = None
+    _valid_strains = None
     
     def __init__(self,
                  n_batch = 1, 
@@ -171,7 +172,15 @@ class SkeletonsFlowBase():
             return 2
         else:
             return 1
+
+    @property
+    def valid_strains(self):
+        if self._valid_strains is None:
+            self._valid_strains = list(self.skeletons_ranges['strain'].unique())
+        return self._valid_strains
     
+
+
 class SkeletonsFlowShuffled(SkeletonsFlowBase):
     _epoch_size = None
     _i_epoch = 0
@@ -285,7 +294,7 @@ class SkeletonsFlowFull(SkeletonsFlowBase):
         self.gap_btw_samples_s = gap_btw_samples_s
         self.gap_btw_samples =  int(round(gap_btw_samples_s/self.sample_frequency_s))
         
-    def prepare_chunks(self, row):
+    def _prepare_chunks(self, row):
         strain_id = row['strain_id']
         
         skeletons = self._read_skeletons(row['ini'], row['fin'], row['fps'])
@@ -300,7 +309,7 @@ class SkeletonsFlowFull(SkeletonsFlowBase):
     def __iter__(self):
         remainder = []
         for irow, row in self.skeletons_ranges.iterrows():
-            chunks = self.prepare_chunks(row)
+            chunks = self._prepare_chunks(row)
             remainder = remainder + chunks
             while len(remainder) >= self.n_batch:
                 chunks = remainder[:self.n_batch]

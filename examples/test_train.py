@@ -153,7 +153,9 @@ if __name__ == '__main__':
     else:        
         log_dir_root = '/Users/ajaver/OneDrive - Imperial College London/classify_strains/logs/'
     
-
+    
+    dataset = 'SWDB'
+    
     params = dict(
             is_reduced = True,
             dataset = 'SWDB',

@@ -84,7 +84,7 @@ class Trainer(object):
         self.logger = TBLogger(log_dir)
     
     def fit(self):
-        best_prec1 = 0
+        best_f1 = 0
         for self.epoch in range(1, self.n_epochs + 1):
             train_metrics = self._train_epoch()
             #save train metrics
@@ -94,14 +94,14 @@ class Trainer(object):
             #save validation metrics
             val_metrics = self._val_epoch()
             
-            val_pred1 = val_metrics['val_pred1']
-            is_best = val_pred1 > best_prec1
-            best_prec1 = max(val_pred1, best_prec1)
+            val_f1 = val_metrics['val_f1']
+            is_best = val_f1 > best_f1
+            best_f1 = max(val_f1, best_f1)
             
             state = {
                 'epoch': self.epoch,
                 'state_dict': self.model.state_dict(),
-                'best_prec1': best_prec1,
+                'best_f1': val_f1,
                 'optimizer' : self.optimizer.state_dict(),
             }
             save_checkpoint(state, is_best, save_dir = self.log_dir)
