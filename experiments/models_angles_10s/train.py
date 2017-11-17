@@ -11,7 +11,9 @@ import sys
 import torch
 from torch import nn
 
-src_dir = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir)
+#Be sure to use abspath linux does not give the path if one uses __file__
+_BASEDIR = os.path.dirname(os.path.abspath(__file__))
+src_dir = os.path.join(_BASEDIR, os.pardir, os.pardir)
 sys.path.append(src_dir)
 
 from classify.trainer import init_generator, Trainer, IS_CUDA
@@ -35,7 +37,7 @@ def main(
         log_dir_root = '/Users/ajaver/OneDrive - Imperial College London/classify_strains/logs/'
     
     #add the parent directory to the log results
-    pdir = os.path.split(os.path.dirname(os.path.abspath(__file__)))[-1]
+    pdir = os.path.split(_BASEDIR)[-1]
     log_dir_root = os.path.join(log_dir_root, pdir)
       
     params = dict(
