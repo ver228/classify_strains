@@ -17,6 +17,11 @@ import math
 from .skeletons_transform import get_skeleton_transform, check_valid_transform
 
 
+valid_label_types = dict(
+        row_id = 1,
+        strain_id = 2
+        )
+
 class SkeletonsFlowBase():
     
     _n_classes = None
@@ -34,7 +39,8 @@ class SkeletonsFlowBase():
                  transform_type = 'angles',
                  is_normalized = False,
                  is_torch = False, 
-                 is_cuda = False
+                 is_cuda = False,
+                 label_type = 'strain_id'
                  ):
 
         check_valid_transform(transform_type)
@@ -48,6 +54,9 @@ class SkeletonsFlowBase():
         self.is_normalized = is_normalized
         self.is_torch = is_torch
         self.is_cuda = is_cuda
+        
+        assert label_type in valid_label_types
+        self.label_type_id = valid_label_types[label_type]
         
         with pd.HDFStore(self.data_file, 'r') as fid:
             skeletons_ranges = fid['/skeletons_groups']
@@ -138,7 +147,7 @@ class SkeletonsFlowBase():
     def _serve_chunk(self, chunks):
         X, Y =  map(np.array, zip(*chunks))
         if self.is_torch:
-            X, Y  = self._to_torch(X, Y )
+            X, Y  = self._to_torch(X, Y)
         
         return X, Y 
     
@@ -205,18 +214,23 @@ class SkeletonsFlowShuffled(SkeletonsFlowBase):
         self._i_epoch += 1
         
         chunks = [self._next_single() for n in range(self.n_batch)]
-        skeletons, strain_ids = self._serve_chunk(chunks)
-        return skeletons, strain_ids
+        X, Y = self._serve_chunk(chunks)
+        return X, Y
     
     
     
     def _random_choice(self):
         strain_id, = random.sample(self.strain_ids, 1)
         gg = self.skel_range_grouped.get_group(strain_id)
-        ind, = random.sample(list(gg.index), 1)
-        skeletons = self.prepare_skeleton(ind)
+        row_id, = random.sample(list(gg.index), 1)
+        skeletons = self.prepare_skeleton(row_id)
 
-        return strain_id, skeletons
+        if self.label_type_id == valid_label_types['row_id']:
+            label = row_id
+        else:
+            label = strain_id
+        
+        return label, skeletons
     
     def _random_transform(self, skeletons):
         # random rotation on the case of skeletons
@@ -253,14 +267,14 @@ class SkeletonsFlowShuffled(SkeletonsFlowBase):
         return skeletons
     
     def _next_single(self):
-        strain_id, skeletons = self._random_choice()
+        label, skeletons = self._random_choice()
         if self.transform_type == 'xy':
             skeletons = self._random_transform(skeletons)
             
         strain_id, skeletons = self._random_choice()
         if self.transform_type == 'xy':
             skeletons = self._random_transform(skeletons)
-        return skeletons, strain_id
+        return skeletons, label
 
     @property
     def epoch_size(self):
@@ -289,22 +303,26 @@ class SkeletonsFlowFull(SkeletonsFlowBase):
         self.gap_btw_samples_s = gap_btw_samples_s
         self.gap_btw_samples =  int(round(gap_btw_samples_s/self.sample_frequency_s))
         
-    def _prepare_chunks(self, row):
-        strain_id = row['strain_id']
-        
+    def _prepare_chunks(self, ind):
+        row = self.skeletons_ranges.loc[ind]
+        if self.label_type_id == valid_label_types['row_id']:
+            label = ind
+        else:
+            label = row['strain_id']
+         
         skeletons = self._read_skeletons(row['ini'], row['fin'], row['fps'])
         skeletons_t = self._transform(skeletons)
         
         fin = skeletons.shape[0] - self.sample_size
-        chunks = [(skeletons_t[tt: tt + self.sample_size], strain_id)
+        chunks = [(skeletons_t[tt: tt + self.sample_size], label)
             for tt in range(0, fin, self.gap_btw_samples)]
         
         return chunks
     
     def __iter__(self):
         remainder = []
-        for irow, row in self.skeletons_ranges.iterrows():
-            chunks = self._prepare_chunks(row)
+        for ind in self.skeletons_ranges.index:
+            chunks = self._prepare_chunks(ind)
             remainder = remainder + chunks
             while len(remainder) >= self.n_batch:
                 chunks = remainder[:self.n_batch]
