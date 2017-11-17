@@ -8,6 +8,7 @@ Created on Fri Nov 17 10:43:03 2017
 
 import os
 import sys
+import time
 import torch
 from torch import nn
 
@@ -39,7 +40,7 @@ def main(
     #add the parent directory to the log results
     pdir = os.path.split(_BASEDIR)[-1]
     log_dir_root = os.path.join(log_dir_root, pdir)
-      
+    
     params = dict(
             is_reduced = is_reduced,
             dataset = dataset,
@@ -56,7 +57,8 @@ def main(
     get_model_func = getattr(models, model_name)
     model = get_model_func(train_generator)
     
-    log_dir = os.path.join(log_dir_root, '{}_{}'.format(model_name, gen_details))
+    
+    log_dir = os.path.join(log_dir_root, '{}_{}_{}'.format(model_name, gen_details, time.strftime('%Y%m%d_%H%M%S')))
     
     #show some data for debugging purposes
     print(model)
