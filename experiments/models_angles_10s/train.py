@@ -12,8 +12,8 @@ import torch
 from torch import nn
 
 #Be sure to use abspath linux does not give the path if one uses __file__
-_BASEDIR = os.path.dirname(os.path.abspath(__file__), 'src')
-src_dir = os.path.join(_BASEDIR, os.pardir, os.pardir)
+_BASEDIR = os.path.dirname(os.path.abspath(__file__))
+src_dir = os.path.join(_BASEDIR, os.pardir, os.pardir, 'src')
 sys.path.append(src_dir)
 
 from classify.trainer import init_generator, Trainer, IS_CUDA
