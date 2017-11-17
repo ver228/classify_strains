@@ -16,7 +16,7 @@ import warnings
 import numpy as np
 from collections import OrderedDict
 from ..flow import get_datset_file, get_valid_strains, \
-                SkeletonsFlowFull, SkeletonsFlowShuffled, IS_CUDA
+                SkeletonsFlowFull, SkeletonsFlowShuffled
 
 
 def accuracy(output, target, topk=(1,)):
@@ -202,6 +202,7 @@ def init_generator(dataset = '',
           n_batch = 32,
           transform_type = 'angles',
           is_normalized = False,
+          is_cuda = False,
           _valid_strains = None #used for testing
           ):
     
@@ -223,7 +224,8 @@ def init_generator(dataset = '',
            sample_frequency_s = sample_frequency_s,
            transform_type = transform_type,
            is_normalized = is_normalized,
-           is_torch = True
+           is_torch = True,
+           is_cuda = is_cuda
            )
     
     gen_details = get_params_str(dataset, is_reduced, gen_params)
