@@ -34,7 +34,7 @@ cp $WORK/classify_strains/train_set/{train_file} $TMPDIR/
 
 if __name__ == '__main__':
     #add the parent directory to the log results
-    pdir = os.path.split(os.path.dirname(__file__))[-1]
+    pdir = os.path.split(os.path.dirname(os.path.abspath(__file__)))[-1]
     save_dir = os.path.join(os.pardir, 'cmd_scripts', pdir)
 
     if not os.path.exists(save_dir):
