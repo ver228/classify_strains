@@ -17,9 +17,6 @@ base_file = '''
 #PBS -l select=1:ncpus=2:mem=16gb:ngpus=1
 ## This tells the batch manager to use NN node with MM cpus and PP gb of memory per node with QQ gpus available.
 
-#PBS -q gpgpu
-## This tells the batch manager to enqueue the job in the general gpgpu queue.
-
 module load anaconda3
 module load cuda
 ## This job requires CUDA support.
