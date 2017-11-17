@@ -12,7 +12,7 @@ import torch
 from torch import nn
 
 #Be sure to use abspath linux does not give the path if one uses __file__
-_BASEDIR = os.path.dirname(os.path.abspath(__file__))
+_BASEDIR = os.path.dirname(os.path.abspath(__file__), 'src')
 src_dir = os.path.join(_BASEDIR, os.pardir, os.pardir)
 sys.path.append(src_dir)
 
