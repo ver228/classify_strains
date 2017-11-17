@@ -1,4 +1,4 @@
 
 *.pyc
 
-src/experiments/cmd_scripts/
+experiments/cmd_scripts/
