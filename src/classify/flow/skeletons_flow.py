@@ -16,7 +16,6 @@ import torch
 import math
 from .skeletons_transform import get_skeleton_transform, check_valid_transform
 
-IS_CUDA = torch.cuda.is_available()
 
 class SkeletonsFlowBase():
     
@@ -34,7 +33,8 @@ class SkeletonsFlowBase():
                  sample_frequency_s =1 / 10.,
                  transform_type = 'angles',
                  is_normalized = False,
-                 is_torch = False
+                 is_torch = False, 
+                 is_cuda = False
                  ):
 
         check_valid_transform(transform_type)
@@ -47,6 +47,7 @@ class SkeletonsFlowBase():
         self.transform_type = transform_type
         self.is_normalized = is_normalized
         self.is_torch = is_torch
+        self.is_cuda = is_cuda
         
         with pd.HDFStore(self.data_file, 'r') as fid:
             skeletons_ranges = fid['/skeletons_groups']
@@ -125,7 +126,7 @@ class SkeletonsFlowBase():
         Xt = torch.from_numpy(X).float()
         Yt = torch.from_numpy(Y).long()
         
-        if IS_CUDA:
+        if self.is_cuda:
             Xt = Xt.cuda()
             Yt = Yt.cuda()
             
