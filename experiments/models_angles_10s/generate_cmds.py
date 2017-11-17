@@ -42,7 +42,7 @@ if __name__ == '__main__':
     
     time_str = '24:00:00'
     
-    main_file = os.path.join(os.path.dirname(__file__), 'train.py')
+    main_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'train.py')
     
     dft_params = OrderedDict(
         model_name = None,

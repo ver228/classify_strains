@@ -35,7 +35,7 @@ def main(
         log_dir_root = '/Users/ajaver/OneDrive - Imperial College London/classify_strains/logs/'
     
     #add the parent directory to the log results
-    pdir = os.path.split(os.path.dirname(__file__))[-1]
+    pdir = os.path.split(os.path.dirname(os.path.abspath(__file__)))[-1]
     log_dir_root = os.path.join(log_dir_root, pdir)
       
     params = dict(
