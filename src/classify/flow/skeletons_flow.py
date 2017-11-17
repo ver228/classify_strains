@@ -16,13 +16,7 @@ import torch
 import math
 from .skeletons_transform import get_skeleton_transform, check_valid_transform
 
-#MAYBE I SHOULD MOVE THIS TO __init__
-import os
 IS_CUDA = torch.cuda.is_available()
-if IS_CUDA:
-    # to prevent opencv from initializing CUDA in workers
-    torch.randn(8).cuda()
-    os.environ['CUDA_VISIBLE_DEVICES'] = ''
 
 class SkeletonsFlowBase():
     
