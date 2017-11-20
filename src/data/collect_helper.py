@@ -277,3 +277,4 @@ def collect_skeletons(experiments_df,
                     obj = strains_codes,
                     filters = TABLE_FILTERS
                     )
+    #%%
