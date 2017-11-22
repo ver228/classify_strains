@@ -15,7 +15,6 @@ class EmbeddingModel(nn.Module):
         
         self.snp_mapper = nn.Sequential(
             nn.Linear(snps_size, 2048), 
-            #i do not think a non-linear activation will make a differences here
             nn.Linear(2048, embedding_size)
         )
         self.classification = nn.Linear(embedding_size, n_classes)

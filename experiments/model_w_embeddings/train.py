@@ -28,7 +28,7 @@ def main(
     sample_size_seconds = 10,
     sample_frequency_s = 0.04,
     n_batch = 32,
-    n_epochs = 200,
+    n_epochs = 200
     ):
     if sys.platform == 'linux':
         log_dir_root = '/work/ajaver/classify_strains/results'
