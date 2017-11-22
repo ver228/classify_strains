@@ -191,7 +191,7 @@ class ROIFlowBatch(ROIFlowBase):
         dat = dat[:, None, ...]
         X = torch.from_numpy(dat)
         if self.is_cuda:
-            X = X.gpu()
+            X = X.cuda()
         
         X = Variable(X)
         return X

@@ -40,6 +40,7 @@ class SkeletonsFlowBase():
                  is_normalized = False,
                  is_torch = False, 
                  is_cuda = False,
+                 return_snps = False,
                  label_type = 'strain_id'
                  ):
 
