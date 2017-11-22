@@ -84,11 +84,14 @@ class ROIFlowBase():
                  mask_file, 
                  feat_file, 
                  roi_size=128,
-                 is_shuffle = False):
+                 is_shuffle = False,
+                 is_cuda = False
+                 ):
         self.mask_file = mask_file
         self.feat_file = feat_file
         self.roi_size = roi_size
         self.is_shuffle = is_shuffle
+        self.is_cuda = is_cuda
         
         with pd.HDFStore(self.feat_file) as fid:
             trajectories_data = fid['trajectories_data']
@@ -187,6 +190,9 @@ class ROIFlowBatch(ROIFlowBase):
         dat = shift_and_normalize(dat.astype(np.float32)) + 0.5
         dat = dat[:, None, ...]
         X = torch.from_numpy(dat)
+        if self.is_cuda:
+            X = X.gpu()
+        
         X = Variable(X)
         return X
     
