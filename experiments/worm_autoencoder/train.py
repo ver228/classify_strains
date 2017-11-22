@@ -18,7 +18,7 @@ src_dir = os.path.join(_BASEDIR, 'src')
 sys.path.append(src_dir)
 
 from flow import ROIFlowBatch
-from models import VAE, AE, vae_loss
+from models import VAE, AE, VAELoss
 from trainer import TrainerAutoEncoder
 
 
@@ -45,14 +45,14 @@ fname = 'BRC20067_worms10_food1-10_Set10_Pos5_Ch6_16052017_165021.hdf5'
 mask_file = os.path.join(data_dir,fname)
 feat_file = os.path.join(data_dir,fname.replace('.hdf5', '_featuresN.hdf5'))
 
-def main(model_name='AE', 
+def main(model_name='VAE', 
          n_epochs=1000,
          batch_size=32, 
          roi_size=128
          ):
     if model_name == 'VAE':
         model = VAE()
-        criterion = vae_loss
+        criterion = VAELoss()
     elif 'AE':
         model = AE()
         criterion = nn.MSELoss()

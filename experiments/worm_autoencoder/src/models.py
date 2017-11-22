@@ -11,19 +11,24 @@ from torch.autograd import Variable
 from torch.nn import functional as F
 import math
 
-def vae_loss(output, target):
-    decoded, mu, logvar = output
-    BCE = F.binary_cross_entropy(decoded, target)
+class VAELoss(nn.Module):
+    def __init__(self, embedding_loss_mixture=0.1):
+        super().__init__()
 
-    # see Appendix B from VAE paper:
-    # Kingma and Welling. Auto-Encoding Variational Bayes. ICLR, 2014
-    # https://arxiv.org/abs/1312.6114
-    # 0.5 * sum(1 + log(sigma^2) - mu^2 - sigma^2)
-    KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
-    # Normalise by same number of elements as in reconstruction
-    KLD /= decoded.view(-1).size(0)
 
-    return BCE + KLD
+    def forward(self, output, target):
+        decoded, mu, logvar = output
+        BCE = F.binary_cross_entropy(decoded, target)
+    
+        # see Appendix B from VAE paper:
+        # Kingma and Welling. Auto-Encoding Variational Bayes. ICLR, 2014
+        # https://arxiv.org/abs/1312.6114
+        # 0.5 * sum(1 + log(sigma^2) - mu^2 - sigma^2)
+        KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
+        # Normalise by same number of elements as in reconstruction
+        KLD /= decoded.view(-1).size(0)
+        return BCE + KLD
+
 
 class VAE(nn.Module):
     def __init__(self):

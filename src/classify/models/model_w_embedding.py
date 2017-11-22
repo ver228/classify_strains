@@ -13,7 +13,11 @@ class EmbeddingModel(nn.Module):
         self.embedding_size = embedding_size
         self.snps_size = snps_size
         
-        self.snp_mapper = nn.Linear(snps_size, embedding_size)
+        self.snp_mapper = nn.Sequential(
+            nn.Linear(snps_size, 2048), 
+            #i do not think a non-linear activation will make a differences here
+            nn.Linear(2048, embedding_size)
+        )
         self.classification = nn.Linear(embedding_size, n_classes)
 
     def forward(self, input_d):
