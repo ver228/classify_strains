@@ -30,7 +30,7 @@ if __name__ == '__main__':
     src_dir = os.path.join(os.path.dirname(__file__), os.pardir)
     sys.path.append(src_dir)
     
-    from classify.data import SkeletonsFlowFull, SkeletonsFlowShuffled, get_datset_file
+    from classify.flow import SkeletonsFlowFull, SkeletonsFlowShuffled, get_datset_file
     
     dataset = 'CeNDR'
     #dataset = 'SWDB'
