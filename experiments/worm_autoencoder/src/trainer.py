@@ -94,7 +94,7 @@ class TrainerAutoEncoder(object):
         return self._metrics_avg(all_metrics)
     
     def _pbar_description(self, m, is_train):
-        m_str = ', '.join(['{}: {:.3f}'.format(*x) for x in m])
+        m_str = ', '.join(['{}: {:}'.format(*x) for x in m])
         d_str = 'Epoch : {} | {}'.format(self.epoch, m_str)
         
         return d_str

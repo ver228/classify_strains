@@ -45,7 +45,7 @@ fname = 'BRC20067_worms10_food1-10_Set10_Pos5_Ch6_16052017_165021.hdf5'
 mask_file = os.path.join(data_dir,fname)
 feat_file = os.path.join(data_dir,fname.replace('.hdf5', '_featuresN.hdf5'))
 
-def main(model_name='VAE', 
+def main(model_name='AE', 
          n_epochs=1000,
          batch_size=32, 
          roi_size=128
