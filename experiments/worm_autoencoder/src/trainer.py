@@ -85,6 +85,7 @@ class TrainerAutoEncoder(object):
             loss = self.criterion(output, input_var)
             self.optimizer.zero_grad()
             loss.backward()
+            self.optimizer.step()
             
             m = self._metrics(output, input_var, loss, is_train=True)
             all_metrics.append(m)
