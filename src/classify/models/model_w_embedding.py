@@ -3,7 +3,7 @@
 import torch.nn as nn
 import torch.nn.functional as F
 
-__all__ = ['EmbeddingModel', 'FullLoss']
+__all__ = ['EmbeddingModel', 'FullLossL2']
 
 
 class EmbeddingModel(nn.Module):
@@ -16,14 +16,15 @@ class EmbeddingModel(nn.Module):
         self.snp_mapper = nn.Linear(snps_size, embedding_size)
         self.classification = nn.Linear(embedding_size, n_classes)
 
-    def forward(self, video_input, snps):
+    def forward(self, input_d):
+        video_input, snps = input_d
         video_embedding = self.video_model(video_input)
         classification = self.classification(video_embedding)
-        snps_embedding = self.mapper(snps)
+        snps_embedding = self.snp_mapper(snps)
         return classification, video_embedding, snps_embedding
 
 
-class FullLoss(nn.Module):
+class FullLossL2(nn.Module):
     def __init__(self, embedding_loss_mixture=0.1):
         super().__init__()
 

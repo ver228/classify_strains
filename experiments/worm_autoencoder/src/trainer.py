@@ -47,7 +47,6 @@ class TrainerAutoEncoder(object):
         self.optimizer = optimizer
         self.criterion = criterion
         self.generator = generator
-        self.val_generator = None
         self.n_epochs = n_epochs
         
         # Set the logger
@@ -62,10 +61,8 @@ class TrainerAutoEncoder(object):
             for tag, value in train_metrics.items():
                 self.logger.scalar_summary(tag, value, self.epoch)
             
-            #save validation metrics
-            val_metrics = self._val_epoch()
             
-            loss = val_metrics['val_f1']
+            loss = train_metrics['train_loss']
             is_best = loss < best_loss
             best_loss = min(loss, best_loss)
             
@@ -98,18 +95,14 @@ class TrainerAutoEncoder(object):
     def _pbar_description(self, m, is_train):
         m_str = ', '.join(['{}: {:.3f}'.format(*x) for x in m])
         d_str = 'Epoch : {} | {}'.format(self.epoch, m_str)
-        if not is_train:
-            'Val ' + d_str
-            
+        
         return d_str
         
         
     def _metrics(self, output, target_var, loss, is_train):
             if is_train:
                 prefix = 'train_'
-            else:
-                prefix = 'val_'
-                
+             
             tb = [('loss' , loss.data[0])]
             tb = [(prefix + x, y) for x,y in tb]
             

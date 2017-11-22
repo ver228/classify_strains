@@ -38,9 +38,8 @@ class SkeletonsFlowBase():
                  sample_frequency_s =1 / 10.,
                  transform_type = 'angles',
                  is_normalized = False,
-                 is_torch = False, 
                  is_cuda = False,
-                 return_snps = False,
+                 is_return_snps = False,
                  label_type = 'strain_id'
                  ):
 
@@ -53,8 +52,8 @@ class SkeletonsFlowBase():
         self.data_file = data_file
         self.transform_type = transform_type
         self.is_normalized = is_normalized
-        self.is_torch = is_torch
         self.is_cuda = is_cuda
+        self.is_return_snps = is_return_snps
         
         assert label_type in valid_label_types
         self.label_type_id = valid_label_types[label_type]
@@ -101,6 +100,10 @@ class SkeletonsFlowBase():
 
         self.skeletons_ranges = skeletons_ranges
     
+    
+   
+    
+    
     def _transform(self, skeletons):
         return get_skeleton_transform(skeletons, 
                                transform_type = self.transform_type,
@@ -130,7 +133,7 @@ class SkeletonsFlowBase():
         skeletons = skeletons[ind_s]
         return skeletons
     
-    def _to_torch(self, X, Y):
+    def _to_torch(self, X, Y, snps = None):
         X = np.rollaxis(X, -1, 1) # the channel dimension must be the second one
         
         Xt = torch.from_numpy(X).float()
@@ -143,13 +146,26 @@ class SkeletonsFlowBase():
         input_var = torch.autograd.Variable(Xt)
         target_var = torch.autograd.Variable(Yt)
         
+        if snps is not None:
+            snps = torch.from_numpy(snps).float()
+            if self.is_cuda:
+                snps = snps.cuda()
+            snps = torch.autograd.Variable(snps)
+            input_var = (input_var, snps)
+        
         return input_var, target_var
+    
+    
+        
     
     def _serve_chunk(self, chunks):
         X, Y =  map(np.array, zip(*chunks))
-        if self.is_torch:
+        if self.is_return_snps:
+            strains = self.strain_codes.loc[Y, 'strain'].values
+            snps = self.snps_data[strains].values.T.astype(np.float32)
+            X, Y  = self._to_torch(X, Y, snps)
+        else:
             X, Y  = self._to_torch(X, Y)
-        
         return X, Y 
     
 
@@ -177,6 +193,10 @@ class SkeletonsFlowBase():
             return 2
         else:
             return 1
+
+    @property
+    def n_snps(self):
+        return self.snps_data.shape[0]
 
     @property
     def valid_strains(self):

@@ -21,6 +21,9 @@ from ..flow import get_datset_file, get_valid_strains, \
 
 def accuracy(output, target, topk=(1,)):
     """Computes the precision@k for the specified values of k"""
+    if isinstance(output, tuple):
+        output = output[0]
+    
     maxk = max(topk)
     batch_size = target.size(0)
     
@@ -203,7 +206,9 @@ def init_generator(dataset = '',
           transform_type = 'angles',
           is_normalized = False,
           is_cuda = False,
+          is_return_snps = False,
           _valid_strains = None #used for testing
+
           ):
     
     assert dataset in ['SWDB', 'CeNDR']
@@ -224,8 +229,8 @@ def init_generator(dataset = '',
            sample_frequency_s = sample_frequency_s,
            transform_type = transform_type,
            is_normalized = is_normalized,
-           is_torch = True,
-           is_cuda = is_cuda
+           is_cuda = is_cuda,
+           is_return_snps = is_return_snps
            )
     
     gen_details = get_params_str(dataset, is_reduced, gen_params)
