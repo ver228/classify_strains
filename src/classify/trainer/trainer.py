@@ -199,7 +199,7 @@ def get_params_str(dataset, is_reduced, params):
 
 def init_generator(dataset = '', 
           data_file=None,
-          is_reduced = False,
+          is_reduced = True,
           sample_size_seconds = 10,
           sample_frequency_s = 0.04,
           n_batch = 32,

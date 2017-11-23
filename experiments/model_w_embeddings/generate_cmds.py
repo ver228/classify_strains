@@ -70,9 +70,9 @@ if __name__ == '__main__':
 
 
     short_add = OrderedDict(
-        model_name = lambda x : x,
         loss_type = lambda x : x if x else x,
-        embedding_loss_mixture = lambda x : '{}'.format(x) if x else x
+        embedding_loss_mixture = lambda x : '{}'.format(x) if x else x,
+        model_name = lambda x : x
     )
     
     for args in all_exp:
