@@ -12,7 +12,7 @@ from torch.nn import functional as F
 import math
 
 class VAELoss(nn.Module):
-    def __init__(self, embedding_loss_mixture=0.1):
+    def __init__(self):
         super().__init__()
 
 
@@ -31,12 +31,12 @@ class VAELoss(nn.Module):
 
 
 class VAE(nn.Module):
-    def __init__(self):
-        self.encoder_layer = 128
+    def __init__(self, embedding_size=128):
+        self.embedding_size = embedding_size
         
         
         super().__init__()
-        self.encoder = nn.Sequential(
+        self.cnn_encoder = nn.Sequential(
             nn.Conv2d(1, 32, 7, padding=3),
             nn.BatchNorm2d(32),
             nn.LeakyReLU(),
@@ -57,8 +57,8 @@ class VAE(nn.Module):
         
         
         
-        self.decoder = nn.Sequential(
-            nn.ConvTranspose2d(self.encoder_layer, 128, 7),  # b, 256, 7, 7
+        self.cnn_decoder = nn.Sequential(
+            nn.ConvTranspose2d(256, 128, 7),  # b, 256, 7, 7
             nn.LeakyReLU(),
             nn.ConvTranspose2d(128, 64, 3, stride=2),  # b, 16, 15, 15
             nn.LeakyReLU(),
@@ -71,8 +71,10 @@ class VAE(nn.Module):
             #nn.Tanh()
         )
         
-        self.fc21 = nn.Linear(256, self.encoder_layer)
-        self.fc22 = nn.Linear(256, self.encoder_layer)
+        self.fc_encoder_mu = nn.Linear(256, self.embedding_size)
+        self.fc_encoder_logvar = nn.Linear(256, self.embedding_size)
+        
+        self.fc_decoder = nn.Linear(self.embedding_size, 256)
         
         for m in self.modules():
             if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d)):
@@ -87,22 +89,29 @@ class VAE(nn.Module):
         else:
           return mu
     
-    def forward(self, x_in):
-        x = self.encoder(x_in).view(-1, 256)
-        mu = self.fc21(x)
-        logvar = self.fc22(x)
-        
+    def encoder(self, x_in):
+        x = self.cnn_encoder(x_in).view(-1, 256)
+        mu = self.fc_encoder_mu(x)
+        logvar = self.fc_encoder_logvar(x)
         z = self.reparameterize(mu, logvar)
-        x = self.decoder(z.view(*z.size(), 1, 1))
+        return z, mu, logvar
+    
+    def decoder(self, z):
+        x = self.fc_decoder(z)
+        x = self.cnn_decoder(x.view(*x.size(), 1, 1))
+        return x
+    
+    def forward(self, x_in):
+        z, mu, logvar = self.encoder(x_in)
+        x = self.decoder(z)
         return x, mu, logvar
 
 class AE(nn.Module):
-    def __init__(self):
-        #self.encoder_layer = 128
-        
-        
+    def __init__(self, embedding_size = 256):
         super().__init__()
-        self.encoder = nn.Sequential(
+        self.embedding_size = embedding_size
+        
+        self.cnn_encoder = nn.Sequential(
             nn.Conv2d(1, 32, 7, padding=3),
             nn.BatchNorm2d(32),
             nn.LeakyReLU(),
@@ -120,9 +129,10 @@ class AE(nn.Module):
             nn.LeakyReLU(), 
             nn.MaxPool2d(2), #b, 256, 1, 1
         )
+        self.fc_encoder = nn.Linear(256, self.embedding_size)
+        self.fc_decoder = nn.Linear(self.embedding_size, 256)
         
-        
-        self.decoder = nn.Sequential(
+        self.cnn_decoder = nn.Sequential(
             nn.ConvTranspose2d(256, 128, 7),  # b, 256, 7, 7
             nn.LeakyReLU(),
             nn.ConvTranspose2d(128, 64, 3, stride=2),  # b, 16, 15, 15
@@ -136,14 +146,22 @@ class AE(nn.Module):
             nn.Tanh()
         )
         
-        #self.fc21 = nn.Linear(256, self.encoder_layer)
-        
         for m in self.modules():
             if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d)):
                 n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
                 m.weight.data.normal_(0, math.sqrt(2. / n))
     
-    
+    def encoder(self, x):
+         x = self.cnn_encoder(x).view(-1, 256)
+         x = self.fc_encoder(x)
+         return x
+        
+    def decoder(self, x):
+        x = self.fc_decoder(x)
+        x = x.view(-1, 256, 1, 1)
+        x = self.cnn_decoder(x)
+        return x
+        
     def forward(self, x):
         x = self.encoder(x)
         x = self.decoder(x)

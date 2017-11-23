@@ -46,19 +46,20 @@ mask_file = os.path.join(data_dir,fname)
 feat_file = os.path.join(data_dir,fname.replace('.hdf5', '_featuresN.hdf5'))
 
 def main(model_name='AE', 
+         embedding_size = 128,
          n_epochs=1000,
          batch_size=32, 
          roi_size=128
          ):
     if model_name == 'VAE':
-        model = VAE()
+        model = VAE(embedding_size=embedding_size)
         criterion = VAELoss()
     elif 'AE':
-        model = AE()
+        model = AE(embedding_size=embedding_size)
         criterion = nn.MSELoss()
     
-    gen_details = ''
-    log_dir = os.path.join(log_dir_root, '{}_{}_{}'.format(model_name, gen_details, time.strftime('%Y%m%d_%H%M%S')))
+    details = 'L{}'.format(embedding_size)
+    log_dir = os.path.join(log_dir_root, '{}_{}_{}'.format(model_name, details, time.strftime('%Y%m%d_%H%M%S')))
     #criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
     
@@ -73,7 +74,9 @@ def main(model_name='AE',
                              feat_file, 
                              is_cuda = is_cuda,
                              batch_size = batch_size, 
-                             roi_size = roi_size)
+                             roi_size = roi_size,
+                             is_shuffle = True
+                             )
     t = TrainerAutoEncoder(
                  model,
                  optimizer,

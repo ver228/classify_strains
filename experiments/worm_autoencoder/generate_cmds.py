@@ -43,18 +43,22 @@ if __name__ == '__main__':
     
     dft_params = OrderedDict(
         model_name = None,
-        n_epochs=1000
+        n_epochs=1000,
+        embedding_size = None
     )
     all_exp = []
 
-    model_options = ['AE', 'VAE']
-    for mod in model_options:
-        args = dft_params.copy()
-        args['model_name'] = mod
-        all_exp.append(args)
+    options = {'AE':[4, 16, 64, 128, 256], 'VAE':[64, 256]}
+    for mod, v in options.items():
+        for l_s in v:
+            args = dft_params.copy()
+            args['model_name'] = mod
+            args['embedding_size'] = l_s
+            all_exp.append(args)
 
     short_add = OrderedDict(
-        model_name = lambda x : x
+        model_name = lambda x : x,
+        embedding_size = lambda x : '{}'.format(x)
     )
     
     for args in all_exp:
