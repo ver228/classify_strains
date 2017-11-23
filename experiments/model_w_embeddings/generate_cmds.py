@@ -43,27 +43,36 @@ if __name__ == '__main__':
     
     dft_params = OrderedDict(
         model_name = 'resnet18_w_embedding',
-        is_reduced = None,
+        is_reduced = True,
         embedding_size = 256,
         sample_size_seconds = 10,
         sample_frequency_s = 0.04,
         n_batch = 32,
-        n_epochs = 200
+        n_epochs = 200,
+        embedding_loss_mixture = None,
+        loss_type = None
     )
 
     all_exp = []
-    reduced_options = [False, True]
+    options = [
+            ('l2', 0.),
+            ('l2', 0.01),
+            ('l2', 0.001),
+            ('l1', 0.01),
+            ('l1', 0.001),
+            ]
 
-    for rp in reduced_options:
+    for lt, elm in options:
         args = dft_params.copy()
-        args['model_name'] = 'resnet18_w_embedding'
-        args['is_reduced'] = rp
+        args['loss_type'] = lt
+        args['embedding_loss_mixture'] = elm
         all_exp.append(args)
 
 
     short_add = OrderedDict(
         model_name = lambda x : x,
-        is_reduced = lambda x : 'R' if x else ''
+        loss_type = lambda x : x if x else x,
+        embedding_loss_mixture = lambda x : '{}'.format(x) if x else x
     )
     
     for args in all_exp:

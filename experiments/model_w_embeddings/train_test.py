@@ -17,20 +17,19 @@ src_dir = os.path.join(_BASEDIR, os.pardir, os.pardir, 'src')
 sys.path.append(src_dir)
 
 from classify.trainer import init_generator, Trainer
-from classify.models.model_w_embedding import FullLoss
+from classify.models.model_w_embedding import FullLossL2
 import models
 
 def main(
     model_name = 'resnet18_w_embedding',
     data_file = None, #get defaults
-    is_reduced = True,
+    is_reduced = False,
     embedding_size = 256,
     sample_size_seconds = 10,
     sample_frequency_s = 0.04,
     n_batch = 32,
     n_epochs = 200,
-    embedding_loss_mixture = 0.01,
-    loss_type = 'l1'
+    
     ):
     if sys.platform == 'linux':
         log_dir_root = '/work/ajaver/classify_strains/results'
@@ -57,30 +56,23 @@ def main(
             is_return_snps = True,
             _valid_strains = None #used for testing
     )
-    _, train_generator, test_generator = init_generator(**params)
+    gen_details, train_generator, test_generator = init_generator(**params)
+    
     
     assert model_name in dir(models)
     get_model_func = getattr(models, model_name)
     model = get_model_func(train_generator, embedding_size, embedding_loss_mixture)
     
-    
-    
-    #maybe i should include the criterion and optimizer as input parameters
-    criterion = FullLoss(embedding_loss_mixture=embedding_loss_mixture, 
-                         loss_type=loss_type)
-    
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
-    
-    extra_details = 'L{}_{}_{}'.format(embedding_size, loss_type, embedding_loss_mixture)
-    
-    log_dir = os.path.join(log_dir_root, '{}_{}_{}'.format(model_name, extra_details, time.strftime('%Y%m%d_%H%M%S')))
-    
+    log_dir = os.path.join(log_dir_root, '{}_{}_{}'.format(model_name, gen_details, time.strftime('%Y%m%d_%H%M%S')))
     
     #show some data for debugging purposes
     print(model)
     print(test_generator.valid_strains)
     print(log_dir)
     
+    #maybe i should include the criterion and optimizer as input parameters
+    criterion = FullLossL2()
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
     
     if is_cuda:
         print('This is CUDA!!!!')

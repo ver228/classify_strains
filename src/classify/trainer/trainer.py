@@ -217,7 +217,7 @@ def init_generator(dataset = '',
         data_file = get_datset_file(dataset)
         
     if _valid_strains is None:
-        valid_strains = get_valid_strains(dataset, is_reduced=True)
+        valid_strains = get_valid_strains(dataset, is_reduced=is_reduced)
     else:
         valid_strains = _valid_strains
     

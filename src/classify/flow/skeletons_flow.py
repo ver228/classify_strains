@@ -67,6 +67,12 @@ class SkeletonsFlowBase():
             # read SNP only valid in CeNDR
             if '/snps_data' in fid:
                 self.snps_data = fid['/snps_data']
+                snps_strains = [x for x in self.snps_data.columns[4:].values]
+                if valid_strains is None:
+                    valid_strains = snps_strains
+                else:
+                    valid_strains = list(set.intersection(set(valid_strains), set(snps_strains)))
+                    
 
         # Join the experiments and skeletons groups tables
         # I must use pd.join  NOT pd.merge to keep the same indexes as skeletons groups
@@ -88,7 +94,7 @@ class SkeletonsFlowBase():
             # use previously calculated indexes to divide data in training, validation and test sets
             valid_indices = self.data.get_node('/index_groups/' + set_type)[:]
             skeletons_ranges = skeletons_ranges.loc[valid_indices]
-
+            
         # filter data to contain only the valid strains given
         if valid_strains is not None:
             skeletons_ranges = skeletons_ranges[

@@ -8,7 +8,7 @@ Created on Fri Nov 17 11:55:57 2017
 from classify.models.resnet import ResNetS, BasicBlock
 from classify.models.model_w_embedding import EmbeddingModel
 
-def resnet18_w_embedding(gen, embedding_size):
+def resnet18_w_embedding(gen, embedding_size, embedding_loss_mixture):
     video_model = ResNetS(BasicBlock, 
                     [2, 2, 2, 2], 
                     avg_pool_kernel = (7,1),

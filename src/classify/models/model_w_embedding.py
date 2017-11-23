@@ -3,7 +3,7 @@
 import torch.nn as nn
 import torch.nn.functional as F
 
-__all__ = ['EmbeddingModel', 'FullLossL2']
+__all__ = ['EmbeddingModel', 'FullLoss']
 
 
 class EmbeddingModel(nn.Module):
@@ -26,14 +26,19 @@ class EmbeddingModel(nn.Module):
         snps_embedding = self.snp_mapper(snps)
         return classification, video_embedding, snps_embedding
 
+loss_funcs = dict(
+        l2 = F.mse_loss,
+        l1 = F.l1_loss
+        )
 
-class FullLossL2(nn.Module):
-    def __init__(self, embedding_loss_mixture=0.1):
+
+class FullLoss(nn.Module):
+    def __init__(self, embedding_loss_mixture=0.01, loss_type='l2'):
         super().__init__()
 
         self.embedding_loss_mixture = embedding_loss_mixture
         self.classification_loss = nn.CrossEntropyLoss()
-        #self.embedding_loss = nn.MSELoss()
+        self.embedding_loss = loss_funcs[loss_type]
 
     def forward(self, embedding_output, target_classes):
         classification, video_embedding, snps_embedding = embedding_output
@@ -41,8 +46,7 @@ class FullLossL2(nn.Module):
                                                        target_classes)
         
         # Can't use the Loss layer here because it doesn't like - aej, likely due to autograd gradients
-        embedding_loss = F.mse_loss(snps_embedding, video_embedding,
-                                    size_average=True)
-        loss = classification_loss + \
-        self.embedding_loss_mixture * embedding_loss
+        _embedding_loss = self.embedding_loss(snps_embedding, video_embedding)
+        
+        loss = classification_loss + self.embedding_loss_mixture * _embedding_loss
         return loss
