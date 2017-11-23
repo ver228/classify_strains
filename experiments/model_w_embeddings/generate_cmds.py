@@ -72,6 +72,7 @@ if __name__ == '__main__':
     short_add = OrderedDict(
         loss_type = lambda x : x if x else x,
         embedding_loss_mixture = lambda x : '{}'.format(x) if x else x,
+        is_reduced = lambda x : 'R' if x else '',
         model_name = lambda x : x
     )
     

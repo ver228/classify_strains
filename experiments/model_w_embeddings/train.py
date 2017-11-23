@@ -72,7 +72,8 @@ def main(
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
     
     extra_details = 'L{}_{}_{}'.format(embedding_size, loss_type, embedding_loss_mixture)
-    
+    if is_reduced:
+        extra_details = 'R_' + extra_details
     log_dir = os.path.join(log_dir_root, '{}_{}_{}'.format(model_name, extra_details, time.strftime('%Y%m%d_%H%M%S')))
     
     

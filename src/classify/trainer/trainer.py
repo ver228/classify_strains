@@ -237,5 +237,6 @@ def init_generator(dataset = '',
     train_generator = SkeletonsFlowShuffled(set_type = 'train', **gen_params)
     val_generator = SkeletonsFlowFull(set_type = 'test', **gen_params)
     
+
     return gen_details, train_generator, val_generator
     
