@@ -49,24 +49,31 @@ if __name__ == '__main__':
         sample_frequency_s = 0.04,
         n_batch = 32,
         n_epochs = 200,
-        embedding_loss_mixture = None,
-        loss_type = None
+        embedding_loss_mixture = 0,
+        loss_type = 'l2'
     )
 
     all_exp = []
-    options = [
-            ('l2', 0.),
-            ('l2', 0.01),
-            ('l2', 0.001),
-            ('l1', 0.01),
-            ('l1', 0.001),
-            ]
-
-    for lt, elm in options:
+    options = ['simple_no_emb', 'resnet18_no_emb', 'resnet50_no_emb']
+    for m in options:
         args = dft_params.copy()
-        args['loss_type'] = lt
-        args['embedding_loss_mixture'] = elm
+        args['model_name'] = m
         all_exp.append(args)
+    
+    
+#    options = [
+#            ('l2', 0.),
+#            ('l2', 0.01),
+#            ('l2', 0.001),
+#            ('l1', 0.01),
+#            ('l1', 0.001),
+#            ]
+#
+#    for lt, elm in options:
+#        args = dft_params.copy()
+#        args['loss_type'] = lt
+#        args['embedding_loss_mixture'] = elm
+#        all_exp.append(args)
 
 
     short_add = OrderedDict(

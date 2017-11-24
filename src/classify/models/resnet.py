@@ -114,8 +114,6 @@ class ResNetS(nn.Module):
         self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
         self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
         
-        
-        
         self.fc = nn.Linear(512 * block.expansion, num_classes)
         
         #initialize all the modules, Xavier initialization for conv2d

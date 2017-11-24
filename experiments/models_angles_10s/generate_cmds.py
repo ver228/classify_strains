@@ -43,7 +43,7 @@ if __name__ == '__main__':
     
     dft_params = OrderedDict(
         model_name = None,
-        dataset = 'SWDB',
+        dataset = 'CeNDR',
         data_file = None, #get defaults
         is_reduced = True,
         sample_size_seconds = 10,
@@ -56,8 +56,8 @@ if __name__ == '__main__':
 
     all_exp = []
     #test1 -> resnet18 on several data transforms with and without normalization
-    transform_options = ['xy', 'angles', 'eigenworms', 'eigenworms_full']
-    normalize_options = [False, True]
+    transform_options = ['angles']#['xy', 'angles', 'eigenworms', 'eigenworms_full']
+    normalize_options = [True]#[False, True]
 
     for tp, np in product(transform_options, normalize_options):
         args = dft_params.copy()
@@ -67,7 +67,7 @@ if __name__ == '__main__':
         all_exp.append(args)
 
     #test12-> different resnets on unnormalized angles
-    model_options = ['resnet18', 'resnet34', 'resnet50', 'resnet101']
+    model_options = ['resnet18']#, 'resnet34', 'resnet50', 'resnet101']
     for mod in model_options:
         args = dft_params.copy()
         args['model_name'] = mod
