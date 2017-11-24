@@ -46,7 +46,6 @@ if __name__ == '__main__':
     
     import tqdm
     for epoch in range(1000):
-        avg_loss = []
         pbar = tqdm.tqdm(range(0, len(all_snippets), batch_size))
         for ii in pbar:
             snippets = all_snippets[ii:ii+batch_size]
@@ -59,7 +58,6 @@ if __name__ == '__main__':
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-            avg_loss.append(loss[0])
             
-        pbar.set_description('Epoch {} loss {}'.format(epoch, np.median(avg_loss)), refresh=False)
+            pbar.set_description('Epoch {} loss {}'.format(epoch, loss.data[0]), refresh=False)
                 
