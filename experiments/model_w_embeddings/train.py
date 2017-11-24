@@ -61,7 +61,7 @@ def main(
     
     assert model_name in dir(models)
     get_model_func = getattr(models, model_name)
-    model = get_model_func(train_generator, embedding_size, embedding_loss_mixture)
+    model = get_model_func(train_generator, embedding_size)
     
     
     
