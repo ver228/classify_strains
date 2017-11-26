@@ -55,6 +55,7 @@ class SkeletonsFlowBase():
         self.is_cuda = is_cuda
         self.is_return_snps = is_return_snps
         
+        #use it to return the row_id instead of the label_type useful for debugging...
         assert label_type in valid_label_types
         self.label_type_id = valid_label_types[label_type]
         
@@ -104,10 +105,13 @@ class SkeletonsFlowBase():
         skeletons_ranges = skeletons_ranges.groupby('strain_id').filter(
             lambda x: len(x['experiment_id'].unique()) >= min_num_experiments)
 
+        # filter the chucks of continous skeletons to have at least the required sample size
+        good = skeletons_ranges.apply(lambda x: x['fps'] * (
+            x['fin'] - x['ini']) >= self.sample_size_seconds, axis=1)
+        skeletons_ranges = skeletons_ranges[good]
+        
         self.skeletons_ranges = skeletons_ranges
-    
-    
-   
+        self.strain_ids = [int(x) for x in self.skeletons_ranges['strain_id'].unique()]
     
     
     def _transform(self, skeletons):
@@ -218,18 +222,9 @@ class SkeletonsFlowShuffled(SkeletonsFlowBase):
     
     def __init__(self, **argkws):
         super().__init__(**argkws)
-        
-        
         # Only used when suffle == False.
-        self.skeleton_id = -1
-        
-        # filter the chucks of continous skeletons to have at least the required sample size
-        good = self.skeletons_ranges.apply(lambda x: x['fps'] * (
-            x['fin'] - x['ini']) >= self.sample_size_seconds, axis=1)
-        self.skeletons_ranges = self.skeletons_ranges[good]
         self.skel_range_grouped = self.skeletons_ranges.groupby('strain_id')
-        self.strain_ids = list(map(int, self.skel_range_grouped.indices.keys()))
-    
+        
     def __iter__(self):
         self._i_epoch = 0
         return self
@@ -298,9 +293,6 @@ class SkeletonsFlowShuffled(SkeletonsFlowBase):
         if self.transform_type == 'xy':
             skeletons = self._random_transform(skeletons)
             
-        strain_id, skeletons = self._random_choice()
-        if self.transform_type == 'xy':
-            skeletons = self._random_transform(skeletons)
         return skeletons, label
 
     @property
@@ -323,8 +315,6 @@ class SkeletonsFlowFull(SkeletonsFlowBase):
     _total = None
     def __init__(self, gap_btw_samples_s = None,  **argkws):
         super().__init__(**argkws)
-        self.skeleton_id = -1
-        
         if gap_btw_samples_s is None:
             gap_btw_samples_s = self.sample_size_seconds/2
         self.gap_btw_samples_s = gap_btw_samples_s
