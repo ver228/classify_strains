@@ -17,7 +17,6 @@ src_dir = os.path.join(_BASEDIR, os.pardir, os.pardir, 'src')
 sys.path.append(src_dir)
 
 
-
 from classify.trainer import init_generator, Trainer
 import models
 from models import FullLoss
@@ -40,9 +39,9 @@ def _get_log_dir(model_name, details=''):
 
 
 data_dir = '/Users/ajaver/OneDrive - Imperial College London/classify_strains/train_data/_old/CeNDR_skel_smoothed.hdf5'
-data_dir = None
+#data_dir = None
 if __name__ == '__main__':
-    model_name = 'simple_no_emb'#'resnet18_no_emb'#
+    model_name = 'simple_w_emb'#'resnet18_no_emb'#
     data_file = data_dir
     is_reduced = True
     embedding_size = 256
@@ -50,7 +49,7 @@ if __name__ == '__main__':
     sample_frequency_s = 0.04
     n_batch = 32
     n_epochs = 200
-    embedding_loss_mixture = 0.001
+    embedding_loss_mixture = 0.01
     
     params = dict(
             is_reduced = is_reduced,
@@ -63,26 +62,20 @@ if __name__ == '__main__':
             is_normalized = False,
             is_cuda = is_cuda,
             is_return_snps = True,
-            _valid_strains = ['N2', 'CB4856'] #used for testing
+            _valid_strains = ['N2', 'EG4725'] #used for testing
     )
     gen_details, train_generator, test_generator = init_generator(**params)
     
     assert model_name in dir(models)
     get_model_func = getattr(models, model_name)
-    model = get_model_func(train_generator, embedding_size)
-    
-    log_dir = _get_log_dir(model_name, details=gen_details)
-    #%%
-    for X,Y in train_generator: break
+    model = get_model_func(test_generator, embedding_size)
     
     #%%
-    #show some data for debugging purposes
-    print(model)
-    print(test_generator.valid_strains)
-    print(log_dir)
+    
     
     #maybe i should include the criterion and optimizer as input parameters
     criterion = FullLoss(embedding_loss_mixture)
+    #criterion = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
     
     if is_cuda:
@@ -91,6 +84,28 @@ if __name__ == '__main__':
         model = model.cuda()
         criterion = criterion.cuda()
     
+    log_dir = _get_log_dir(model_name, details=gen_details)
+    
+    #%%
+    #show some data for debugging purposes
+    print(model)
+    print(test_generator.valid_strains)
+    #print(log_dir)
+    
+    
+#    model.train()
+#    for ii, (X, Y) in enumerate(train_generator): 
+#        output = model(X)
+#        output = output[0]
+#        loss = criterion(output, Y)
+#
+#        optimizer.zero_grad()
+#        loss.backward()
+#        #torch.nn.utils.clip_grad_norm(model.parameters(), 0.25)
+#        optimizer.step()
+#
+#        acc = sum([x[0]==x[1] for x in zip(Y.data, output.max(1)[1].data)])/Y.size(0)
+#        print(ii, loss.data[0], acc)
 
     t = Trainer(model,
              optimizer,
@@ -101,6 +116,6 @@ if __name__ == '__main__':
              log_dir
              )
     t.fit()
-    
-
-  
+###    
+#
+#  

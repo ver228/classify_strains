@@ -8,7 +8,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import math
 import tqdm
-
+import numpy as np
 
 def conv3x3(in_planes, out_planes, stride=1):
     "3x3 convolution with padding"
@@ -145,10 +145,10 @@ if __name__ == '__main__':
     
     
     # add the 'src' directory as one where we can import modules
-    src_dir = os.path.join(os.path.dirname(__file__), os.pardir, 'classify_nn')
+    src_dir = os.path.join(os.path.dirname(__file__), os.pardir, 'src')
     sys.path.append(src_dir)
     
-    from data import SkeletonsFlowFull, get_valid_strains
+    from classify.flow import SkeletonsFlowFull, SkeletonsFlowShuffled, get_valid_strains
     
     models_path = '/Users/ajaver/OneDrive - Imperial College London/classify_strains/logs/model_20171103/'
     models_names = [
@@ -161,7 +161,7 @@ if __name__ == '__main__':
     
     n_classes = 197
     
-    model_name = models_names[2]
+    model_name = models_names[0]
     fname = os.path.join(models_path, model_name)
     
     model = ResNetS(Bottleneck, [3, 4, 6, 3], n_channels=1, num_classes = n_classes)
@@ -178,14 +178,13 @@ if __name__ == '__main__':
     sample_size_seconds = [float(x[1:]) for x in dd if x.startswith('S')][0]
     sample_frequency_s = [float(x[1:]) for x in dd if x.startswith('F')][0]
     
-    gen = SkeletonsFlowFull(
+    gen = SkeletonsFlowShuffled(
                           n_batch = 32, 
                           data_file = data_file,
-                          set_type = 'test', 
+                          set_type = 'train', 
                           sample_size_seconds = sample_size_seconds, 
                           sample_frequency_s = sample_frequency_s,
                           valid_strains = valid_strains,
-                          is_torch = True
                           )
     results = []
     for input_v, target in tqdm.tqdm(gen):
@@ -194,12 +193,14 @@ if __name__ == '__main__':
         
         results.append((target.data.numpy(), pred1.data.numpy()))
         
-        
+        #current accuracy
+        y_true, y_pred = map(np.concatenate, zip(*results))
+        print(np.sum(y_true==y_pred-1)/y_true.size) 
     #%%
     #NOTE it seems that I train the models using shifting the strain_id by one...
     #This shouldn't affect the embeddings, I'll correct it next time I train a model...
     
-    import numpy as np
+    
     y_true, y_pred = map(np.concatenate, zip(*results))
     #chunk accuracy
     print(np.sum(y_true==y_pred-1)/y_true.size)

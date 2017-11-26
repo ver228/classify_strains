@@ -21,8 +21,6 @@ from ..flow import get_datset_file, get_valid_strains, \
 
 def accuracy(output, target, topk=(1,)):
     """Computes the precision@k for the specified values of k"""
-    if isinstance(output, tuple):
-        output = output[0]
     
     maxk = max(topk)
     batch_size = target.size(0)
@@ -164,20 +162,23 @@ class Trainer(object):
         
         
     def _metrics(self, output, target_var, loss, is_train):
-            (prec1, prec5), f1 = accuracy(output, target_var, topk = (1, 5))
-            if is_train:
-                prefix = 'train_'
-            else:
-                prefix = 'val_'
-                
-            tb = [('loss' , loss.data[0]),
-                ('pred1' , prec1.data[0]),
-                ('pred5' ,  prec5.data[0]),
-                ('f1' , f1)
-                ]
-            tb = [(prefix + x, y) for x,y in tb]
+        if isinstance(output, tuple):
+            output = output[0]
+    
+        (prec1, prec5), f1 = accuracy(output, target_var, topk = (1, 5))
+        if is_train:
+            prefix = 'train_'
+        else:
+            prefix = 'val_'
             
-            return tb
+        tb = [('loss' , loss.data[0]),
+            ('pred1' , prec1.data[0]),
+            ('pred5' ,  prec5.data[0]),
+            ('f1' , f1)
+            ]
+        tb = [(prefix + x, y) for x,y in tb]
+        
+        return tb
    
     def _metrics_avg(self, m):
         dd = [list(zip(*x)) for x in zip(*m)]

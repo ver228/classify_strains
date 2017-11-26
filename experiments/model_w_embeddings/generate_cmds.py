@@ -53,27 +53,32 @@ if __name__ == '__main__':
         loss_type = 'l2'
     )
 
+    # all_exp = []
+    # options = ['simple_no_emb', 'resnet18_no_emb', 'resnet50_no_emb']
+    # for m in options:
+    #     args = dft_params.copy()
+    #     args['model_name'] = m
+    #     all_exp.append(args)
+    
+    options = [
+           ('simple_w_emb', 'l2', 0., True),
+           ('simple_w_emb', 'l2', 0.01, True),
+           ('resnet18_w_emb', 'l2', 0., True),
+           ('resnet18_w_emb', 'l2', 1., True),
+           ('resnet18_w_emb', 'l2', 0.1, True),
+           ('resnet18_w_emb', 'l2', 0.01, True),
+           ('resnet18_w_emb', 'l1', 0.01, True),
+           ('resnet18_w_emb', 'l2', 0.01, False),
+           ]
+
     all_exp = []
-    options = ['simple_no_emb', 'resnet18_no_emb', 'resnet50_no_emb']
-    for m in options:
-        args = dft_params.copy()
-        args['model_name'] = m
-        all_exp.append(args)
-    
-    
-#    options = [
-#            ('l2', 0.),
-#            ('l2', 0.01),
-#            ('l2', 0.001),
-#            ('l1', 0.01),
-#            ('l1', 0.001),
-#            ]
-#
-#    for lt, elm in options:
-#        args = dft_params.copy()
-#        args['loss_type'] = lt
-#        args['embedding_loss_mixture'] = elm
-#        all_exp.append(args)
+    for mod, lt, elm, rr in options:
+       args = dft_params.copy()
+       args['loss_type'] = lt
+       args['model_name'] = mod
+       args['embedding_loss_mixture'] = elm
+       args['is_reduced'] = rr
+       all_exp.append(args)
 
 
     short_add = OrderedDict(
