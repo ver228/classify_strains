@@ -63,7 +63,7 @@ def results_AE():
             plt.subplot(1,n_models+1, n_i+2)
             plt.imshow(imgs[ii], interpolation=None, cmap='gray')
             plt.title(n)
-        
+        plt.savefig('AE_{}.png'.format(ii))
         
 def results_VAE():
     #model_path = os.path.join(model_dir_root, 'VAE_L64_20171124_144333', 'checkpoint.pth.tar')
@@ -118,7 +118,7 @@ def results_VAE():
             plt.subplot(1,n_models+1, n_i+2)
             plt.imshow(imgs[ii], interpolation=None, cmap='gray')
             plt.title(n)        
-        
+        plt.savefig('VAE_{}.png'.format(ii))
         
     
         #%%

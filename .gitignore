@@ -2,3 +2,5 @@
 *.pyc
 
 experiments/cmd_scripts/
+
+*.mp4
