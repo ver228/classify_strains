@@ -9,10 +9,11 @@ import os
 import torch
 import numpy as np
 import matplotlib.pylab as plt
-from train import AE, VAE, is_cuda, feat_file, mask_file, ROIFlowBatch
+from train import AE, VAE, is_cuda, ROIFlowBatch
 import glob
 
-def results_AE():
+
+def results_AE(mask_file, feat_file):
     #%%
     model_dir_root = '/Users/ajaver/OneDrive - Imperial College London/classify_strains/logs/worm_autoencoder'
     dnames = glob.glob(os.path.join(model_dir_root, 'AE_L*'))
@@ -123,7 +124,13 @@ def results_VAE():
     
         #%%
 if __name__ == '__main__':
-    results_AE()
+    #from train import feat_file, mask_file
+    #mask_file = '/Volumes/behavgenom_archive$/Avelino/screening/CeNDR/MaskedVideos/CeNDR_Set1_190517/QX1794_worms10_food1-10_Set5_Pos4_Ch4_19052017_125059.hdf5'
+    mask_file = '/Users/ajaver/OneDrive - Imperial College London/optogenetics/Arantza/MaskedVideos/control_pulse/pkd2_2min_Ch1_11052017_120432.hdf5'
+    feat_file = mask_file.replace('MaskedVideos', 'Results').replace('.hdf5', '_featuresN.hdf5')
+
+
+    results_AE(mask_file, feat_file)
     
     #decoded, mu, _ = model.forward(X)
     #z, _, _ = model.encoder(X)

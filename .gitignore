@@ -4,3 +4,5 @@
 experiments/cmd_scripts/
 
 *.mp4
+
+experiments/worm_autoencoder/AE_*.png

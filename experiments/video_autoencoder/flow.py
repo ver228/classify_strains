@@ -223,16 +223,3 @@ if __name__ == '__main__':
         snippet = np.concatenate(rois_l)
         all_snippets.append(snippet[None, ...])
     
-    
-    #%%
-    
-    
-    #%%
-    
-    #for dat in g:
-    #    print(dat.size())
-    #    break
-            
-    
-    
-    
