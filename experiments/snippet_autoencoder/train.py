@@ -6,12 +6,14 @@ Created on Fri Nov 24 18:28:35 2017
 @author: ajaver
 """
 import torch
-from flow import ROIFlowBatch
 from torch import nn
-from models import AE3D
 import time
 import os
 import sys
+
+from flow import ROIFlowBatch
+from models import AE3D
+
 #Be sure to use abspath linux does not give the path if one uses __file__
 _BASEDIR = os.path.dirname(os.path.abspath(__file__))
 src_dir = os.path.join(_BASEDIR, os.pardir, 'worm_autoencoder', 'src')
@@ -44,10 +46,10 @@ mask_file = os.path.join(data_dir,fname)
 feat_file = os.path.join(data_dir,fname.replace('.hdf5', '_featuresN.hdf5'))
 
 def main(model_name='AE3D', 
-         batch_size = 4,
-         snippet_size = 128,
+         batch_size = 2,
+         snippet_size = 255,
          roi_size = 128,
-         n_epochs = 1000,
+         n_epochs = 10000,
          embedding_size = 256
          ):
     #%%
@@ -72,7 +74,8 @@ def main(model_name='AE3D',
                              roi_size = roi_size,
                              batch_size = batch_size,
                              snippet_size = snippet_size,
-                             is_cuda = is_cuda
+                             is_cuda = is_cuda,
+                             size_per_epoch = 1000
                              )
     
     t = TrainerAutoEncoder(
