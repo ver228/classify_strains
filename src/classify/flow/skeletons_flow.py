@@ -40,6 +40,7 @@ class SkeletonsFlowBase():
                  is_normalized = False,
                  is_cuda = False,
                  is_return_snps = False,
+                 is_autoencoder = False,
                  label_type = 'strain_id'
                  ):
 
@@ -54,6 +55,7 @@ class SkeletonsFlowBase():
         self.is_normalized = is_normalized
         self.is_cuda = is_cuda
         self.is_return_snps = is_return_snps
+        self.is_autoencoder = is_autoencoder
         
         #use it to return the row_id instead of the label_type useful for debugging...
         assert label_type in valid_label_types
@@ -155,6 +157,10 @@ class SkeletonsFlowBase():
             
         input_var = torch.autograd.Variable(Xt)
         target_var = torch.autograd.Variable(Yt)
+        
+        if self.is_autoencoder:
+            target_var = (target_var, input_var)
+        
         
         if snps is not None:
             snps = torch.from_numpy(snps).float()

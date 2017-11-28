@@ -165,6 +165,9 @@ class Trainer(object):
         if isinstance(output, tuple):
             output = output[0]
     
+        if isinstance(target_var, tuple):
+            target_var = target_var[0]
+            
         (prec1, prec5), f1 = accuracy(output, target_var, topk = (1, 5))
         if is_train:
             prefix = 'train_'
@@ -208,6 +211,7 @@ def init_generator(dataset = '',
           is_normalized = False,
           is_cuda = False,
           is_return_snps = False,
+          is_autoencoder = False,
           _valid_strains = None #used for testing
 
           ):
@@ -231,7 +235,8 @@ def init_generator(dataset = '',
            transform_type = transform_type,
            is_normalized = is_normalized,
            is_cuda = is_cuda,
-           is_return_snps = is_return_snps
+           is_return_snps = is_return_snps,
+           is_autoencoder = is_autoencoder
            )
     
     gen_details = get_params_str(dataset, is_reduced, gen_params)

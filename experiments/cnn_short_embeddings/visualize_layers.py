@@ -19,9 +19,11 @@ from classify.flow import SkeletonsFlowFull, get_valid_strains, get_datset_file
 
 if __name__ == '__main__':
     import numpy as np
+    models_path = '/Users/ajaver/OneDrive - Imperial College London/classify_strains/trained_models'
+    model_name = 'simple_w_emb_R_L256_l2_0.01_20171126_010327_best.pth.tar'
     
-    models_path = '/Users/ajaver/OneDrive - Imperial College London/classify_strains/logs/model_20171103/'
-    model_name = 'resnet50_R_CeNDR_ang__S10_F0.04_20171104_182812.pth.tar'
+    #models_path = '/Users/ajaver/OneDrive - Imperial College London/classify_strains/logs/model_20171103/'
+    #model_name = 'resnet50_R_CeNDR_ang__S10_F0.04_20171104_182812.pth.tar'
     dataset = 'CeNDR'
     n_classes = 197
     
