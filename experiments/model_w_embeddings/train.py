@@ -18,10 +18,10 @@ sys.path.append(src_dir)
 
 from classify.trainer import init_generator, Trainer
 from classify.models.model_w_embedding import FullLoss
-import models
+import classify.models.model_w_embedding as models
 
 def main(
-    model_name = 'resnet18_w_embedding',
+    model_name = 'simple_w_emb',
     data_file = None, #get defaults
     is_reduced = True,
     embedding_size = 256,
