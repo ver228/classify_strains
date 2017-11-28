@@ -5,8 +5,9 @@ Created on Wed Nov 22 16:08:01 2017
 
 @author: ajaver
 """
-from torch import nn
 import math
+from torch import nn
+
 
 class AE3D(nn.Module):
     def __init__(self, embedding_size = 256):
@@ -68,3 +69,4 @@ class AE3D(nn.Module):
         x = self.encoder(x)
         x = self.decoder(x)
         return x
+

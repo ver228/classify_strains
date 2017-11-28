@@ -123,7 +123,11 @@ class ROIFlowBase():
     
     
     def _get_frame_rois(self, frame_number):
-        frame_data = self.group_by_frames.get_group(frame_number)
+        try:
+            frame_data = self.group_by_frames.get_group(frame_number)
+        except KeyError:
+            return {}
+        
         frame_img = self.masks[frame_number]
         worms_in_frame = {}
         
@@ -154,52 +158,59 @@ class ROIFlowBase():
             self._size = len(self.trajectories_data.groups.keys())
         return self._size
         
-
 class ROIFlowBatch(ROIFlowBase):
     def __init__(self, 
                  mask_file, 
                  feat_file, 
+                 snippet_size = 128,
                  batch_size = 32,
-                 is_torch = True,
+                 is_cuda = False,
                  **argkws):
         super().__init__(mask_file, feat_file, **argkws)
         self.batch_size = batch_size
-        self.is_torch = is_torch
+        self.snippet_size = snippet_size
+        self.is_cuda = is_cuda
+        
+    def _read_snippets(self, frame_number):
+        rois_collected = {}
+        for ii in range(self.snippet_size):
+            frame_rois = self._get_frame_rois(frame_number + ii)
+            for w, (roi, _) in frame_rois.items():
+                if not w in rois_collected:
+                    rois_collected[w] = []
+                rois_collected[w].append(roi[None, ...])
+        
+        all_snippets = []
+        for w, rois_l in rois_collected.items():
+            if len(rois_l) < self.snippet_size:
+                continue
+            
+            snippet = np.concatenate(rois_l[:self.snippet_size])
+            snippet = shift_and_normalize(snippet.astype(np.float32)) + 0.5
+            
+            all_snippets.append(snippet[None, None, ...])
+        return all_snippets
         
     def __iter__(self):
         #initialize iterator by frames
         super().__iter__()
-        
-        
+        max_frame = self.masks.shape[0] - self.snippet_size
+        frames_l = list(range(max_frame))
+        random.shuffle(frames_l)
         remainder = []
-        while True:
-            frame_data = super().__next__()
-           
-            remainder += [x[None, ... ] for x, _ in frame_data.values()]
-            
-            if len(remainder) >= self.batch_size:
-                chunk = np.concatenate(remainder[:self.batch_size])
-                remainder = remainder[self.batch_size:] 
-                
-                if self.is_torch:
-                    chunk = self._to_torch(chunk)
-                
-                yield chunk
-    
-    def _to_torch(self, dat):
-        dat = shift_and_normalize(dat.astype(np.float32)) + 0.5
-        dat = dat[:, None, ...]
-        X = torch.from_numpy(dat)
-        if self.is_cuda:
-            X = X.cuda()
-        
-        X = Variable(X)
-        return X
-    
-    def __len__(self):
-        if self._size is None:
-            self._size = self.trajectories_data.shape[0]//self.batch_size
-        return self._size
+        for frame_number in frames_l:
+            f_snippets = self._read_snippets(frame_number)
+            remainder += f_snippets
+            while len(remainder) > self.batch_size:
+                snippets = remainder[:self.batch_size]
+                remainder = remainder[self.batch_size:]
+                S = np.concatenate(snippets)
+                S = torch.from_numpy(S)
+                if self.is_cuda:
+                    S = S.cuda()
+                S = Variable(S)
+                yield S
+
 
 if __name__ == '__main__':
     mask_file = '/Users/ajaver/OneDrive - Imperial College London/aggregation/N2_1_Ch1_29062017_182108_comp3.hdf5'
