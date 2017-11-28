@@ -44,7 +44,7 @@ if __name__ == '__main__':
     dft_params = OrderedDict(
         model_name='AE3D', 
          batch_size = 4,
-         snippet_size = 128,
+         snippet_size = 255,
          roi_size = 128,
          n_epochs = 1000,
          embedding_size = 256
