@@ -22,7 +22,7 @@ def weights_init_xavier(m):
         nn.init.uniform(m.weight.data, 1.0, 0.02)
         nn.init.constant(m.bias.data, 0.0)
 
-#%%
+
 class FullAELoss(nn.Module):
     def __init__(self,
                  classification_loss_mixture=1.,
@@ -57,7 +57,7 @@ class FullAELoss(nn.Module):
         
         return loss
 
-#%%
+
 class CNNEncoder(nn.Module):
     def __init__(self, num_output):
         super().__init__()

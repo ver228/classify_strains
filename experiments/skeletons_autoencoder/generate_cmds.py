@@ -72,9 +72,9 @@ if __name__ == '__main__':
 
     short_add = OrderedDict(
         embedding_size = lambda x : 'L{}'.format(x),
-        embedding_loss_mixture = lambda x : '{}'.format(x),
-        classification_loss_mixture = lambda x : '{}'.format(x) ,
-        autoencoder_loss_mixture = lambda x : '{}'.format(x),
+        embedding_loss_mixture = lambda x : 'Emb{}'.format(x),
+        classification_loss_mixture = lambda x : 'Clf{}'.format(x) ,
+        autoencoder_loss_mixture = lambda x : 'AE{}'.format(x),
         is_reduced = lambda x : 'R' if x else ''
     )
     

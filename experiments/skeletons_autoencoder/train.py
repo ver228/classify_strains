@@ -33,6 +33,8 @@ def main(
     classification_loss_mixture = 1.,
     autoencoder_loss_mixture = 1.
     ):
+    model_name = 'EmbeddingAEModel'
+    
     if sys.platform == 'linux':
         log_dir_root = '/work/ajaver/classify_strains/results'
     else:        
@@ -75,7 +77,7 @@ def main(
     
     loss_mixes = (classification_loss_mixture, embedding_loss_mixture, autoencoder_loss_mixture)
     
-    extra_details = 'L{}_M{}_{}_{}'.format(embedding_size, *loss_mixes)
+    extra_details = 'L{}_Clf{}_Emb{}_AE{}'.format(embedding_size, *loss_mixes)
     if is_reduced:
         extra_details = 'R_' + extra_details
     log_dir = os.path.join(log_dir_root, '{}_{}_{}'.format(model_name, extra_details, time.strftime('%Y%m%d_%H%M%S')))
