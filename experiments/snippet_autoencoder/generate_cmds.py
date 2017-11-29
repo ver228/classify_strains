@@ -43,23 +43,24 @@ if __name__ == '__main__':
     
     dft_params = OrderedDict(
         model_name='AE3D', 
-         batch_size = 4,
+         batch_size = 3,
          snippet_size = 255,
          roi_size = 128,
          n_epochs = 1000,
-         embedding_size = 256
+         embedding_size = 256,
+         max_n_frames = -1
     )
     all_exp = []
 
-    batch_sizes = [1,2,3,4,8]
-    for b in batch_sizes:
+    max_n_frames = [-1, 2]
+    for tt in max_n_frames:
         args = dft_params.copy()
-        args['batch_size'] = b
+        args['max_n_frames'] = tt
         all_exp.append(args)
 
     short_add = OrderedDict(
         model_name = lambda x : x,
-        batch_size = lambda x : '{}'.format(x)
+        max_n_frames = lambda x : 'tiny{}'.format(x) if x > 0 else ''
     )
     
     for args in all_exp:

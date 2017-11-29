@@ -5,14 +5,50 @@ Created on Tue Nov 28 00:24:15 2017
 
 @author: ajaver
 """
+import matplotlib.pylab as plt
+import matplotlib.animation as animation
+import numpy as np
+import os
+import torch
+
+from flow import ROIFlowBatch
+
+from models import AE3D
 
 if __name__ == '__main__':
-    import matplotlib.pylab as plt
-    import matplotlib.animation as animation
-    import numpy as np
+    
+    data_dir = '/Users/ajaver/OneDrive - Imperial College London/classify_strains/train_data/videos'
+    fname = 'BRC20067_worms10_food1-10_Set10_Pos5_Ch6_16052017_165021.hdf5'
+    mask_file = os.path.join(data_dir,fname)
+    feat_file = os.path.join(data_dir,fname.replace('.hdf5', '_featuresN.hdf5'))
+    
+    model_file = '/Users/ajaver/OneDrive - Imperial College London/classify_strains/logs/snippet_autoencoder/AE3D_L256_20171128_150429/checkpoint.pth.tar'
+    model = AE3D(256)
+    
+    checkpoint = torch.load(model_file, map_location=lambda storage, loc: storage)
+    model.load_state_dict(checkpoint['state_dict'])
+    model.eval()
+    
+    generator = ROIFlowBatch(mask_file, 
+                             feat_file, 
+                             roi_size = 128,
+                             batch_size = 4,
+                             snippet_size = 255,
+                             max_n_frames=2
+                             )
+    import time
+    tic = time.time()
+    for S in generator:
+        print('G', time.time()-tic)
+        tic = time.time()
+        
+        output = model(S)
+        print('M', time.time()-tic)
+        tic = time.time()
+        break
     
     
-    
+    #%%
     dpi = 100
     def ani_frame(n_batch):
         

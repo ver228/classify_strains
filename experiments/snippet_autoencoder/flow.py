@@ -166,12 +166,18 @@ class ROIFlowBatch(ROIFlowBase):
                  batch_size = 32,
                  is_cuda = False,
                  size_per_epoch = -1,
+                 max_n_frames = -1,
                  **argkws):
         super().__init__(mask_file, feat_file, **argkws)
         self.batch_size = batch_size
         self.snippet_size = snippet_size
         self.is_cuda = is_cuda
         self.size_per_epoch = size_per_epoch
+        
+        if max_n_frames > 0:
+            self.max_n_frames = max_n_frames
+        else:
+            self.max_n_frames = self.masks.shape[0] - self.snippet_size
         
     def _read_snippets(self, frame_number):
         rois_collected = {}
@@ -196,18 +202,22 @@ class ROIFlowBatch(ROIFlowBase):
     def __iter__(self):
         #initialize iterator by frames
         super().__iter__()
-        max_frame = self.masks.shape[0] - self.snippet_size
-        frames_l = list(range(max_frame))
+        
+        
+        frames_l = list(range(self.max_n_frames))
         random.shuffle(frames_l)
         remainder = []
+        
+        
         
         if self.size_per_epoch > 0:
             frames_l = frames_l[:self.size_per_epoch]
         
+        
         for frame_number in frames_l:
             f_snippets = self._read_snippets(frame_number)
             remainder += f_snippets
-            while len(remainder) > self.batch_size:
+            while len(remainder) >= self.batch_size:
                 snippets = remainder[:self.batch_size]
                 remainder = remainder[self.batch_size:]
                 S = np.concatenate(snippets)

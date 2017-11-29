@@ -50,14 +50,20 @@ def main(model_name='AE3D',
          snippet_size = 255,
          roi_size = 128,
          n_epochs = 10000,
-         embedding_size = 256
+         embedding_size = 256,
+         max_n_frames = -1
          ):
     #%%
     if 'AE3D':
         model = AE3D(embedding_size)
     criterion = nn.MSELoss()
     
-    details = 'L{}'.format(embedding_size)
+    if max_n_frames> 0:
+        dd = '_tiny{}'.format(max_n_frames)
+    else:
+        dd = ''
+    
+    details = dd + 'L{}'.format(embedding_size)
     log_dir = os.path.join(log_dir_root, '{}_{}_{}'.format(model_name, details, time.strftime('%Y%m%d_%H%M%S')))
     #criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
@@ -75,7 +81,8 @@ def main(model_name='AE3D',
                              batch_size = batch_size,
                              snippet_size = snippet_size,
                              is_cuda = is_cuda,
-                             size_per_epoch = 1000
+                             size_per_epoch = 1000,
+                             max_n_frames = max_n_frames
                              )
     
     t = TrainerAutoEncoder(
