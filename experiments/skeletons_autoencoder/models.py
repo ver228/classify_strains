@@ -5,6 +5,7 @@ Created on Fri Nov 17 11:55:57 2017
 
 @author: ajaver
 """
+import torch
 from torch import nn
 import torch.nn.functional as F
 
@@ -160,4 +161,10 @@ class EmbeddingAEModel(nn.Module):
         
         video_decoded = self.video_decoder(video_embedding)
         return classification, video_embedding, snps_embedding, video_decoded
-
+    
+    
+    def load_from_file(self, model_path):
+        checkpoint = torch.load(model_path, map_location=lambda storage, loc: storage)
+        self.load_state_dict(checkpoint['state_dict'])
+        self.eval()
+        return self

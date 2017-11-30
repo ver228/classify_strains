@@ -19,63 +19,31 @@ src_dir = os.path.join(_BASEDIR, os.pardir, os.pardir, 'src')
 sys.path.append(src_dir)
 
 from classify.flow import SkeletonsFlowFull, get_valid_strains, get_datset_file
-import classify.models.model_w_embedding as models
+from models import EmbeddingAEModel
 
-
-if __name__ == '__main__':
-    dname = '/Users/ajaver/OneDrive - Imperial College London/classify_strains/trained_models'
+def save_embeddings(model_path, gen):
     
-    #model_file = 'resnet18_w_emb_R_L256_l2_0.1_20171126_010058_best.pth.tar'
-    #props = dict(
-    #        model_name = 'resnet18_w_emb',
-    #        is_residual = True,
-    #        embedding_size = 256
-    #        )
-    model_file = 'simple_w_emb_R_L256_l2_0.01_20171126_010327_best.pth.tar'
-    props = dict(
-            model_name = 'simple_w_emb',
-            is_residual = True,
-            embedding_size = 256
-            )
+    embeddings_file = model_path.replace('_checkpoint.pth.tar', '_embeddings.hdf5')
     
-    embeddings_file = data_file.replace('_skel_smoothed.hdf5', '_embedings.hdf5')
-    model_path = os.path.join(dname, model_file)
+    bn = os.path.basename(model_path)
+    parts = bn.split('_')    
+    embedding_size = [int(x[1:]) for x in parts if x.startswith('L')][0]
     
     
     
+    model = EmbeddingAEModel(gen.n_classes, gen.n_snps, embedding_size)
+    model.load_from_file(model_path)
     
-    dataset = 'CeNDR'
-    valid_strains = get_valid_strains(dataset, is_reduced=True)
-    data_file = get_datset_file(dataset)
-    gen = SkeletonsFlowFull(
-                          n_batch = 32, 
-                          data_file = data_file,
-                          sample_size_seconds = 10, 
-                          sample_frequency_s = 0.04,
-                          valid_strains = valid_strains,
-                          label_type = 'row_id',
-                          is_return_snps = False,
-                          transform_type = 'angles'
-                          )
-    
-    get_model_func = getattr(models, props['model_name'])
-    model = get_model_func(gen, props['embedding_size'])
-    
-    
-    checkpoint = torch.load(model_path, map_location=lambda storage, loc: storage)
-    model.load_state_dict(checkpoint['state_dict'])
-    model.eval()
-
+    #%% Get video embeddings
     results = []
     for ii, (input_v, row_ids) in enumerate(tqdm.tqdm(gen)):
-        video_embedding = model.video_model(input_v)
+        video_embedding = model.video_encoder(input_v)
         pred = model.classification(video_embedding).max(1)[1]
         dat = [x.data.numpy() for x in (row_ids, video_embedding, pred)]    
         results.append(dat)
         
-    #%%
     row_ids, embeddings, predictions = map(np.concatenate, zip(*results))
-    
+    #%% group video embeddings by trajectory
     df_g = pd.DataFrame(row_ids.T, columns=['row_id']).groupby('row_id').groups
     embedding_groups = []
     for irow, row in gen.skeletons_ranges.iterrows():
@@ -85,9 +53,12 @@ if __name__ == '__main__':
             row_n['fin'] = df_g[irow].max()
             row_n['skel_group_id'] = irow
             embedding_groups.append(row_n)
+            
+    #%% Get snps embeddings
     embedding_groups = pd.DataFrame(embedding_groups)
-    #%%
-    snps_embeddings = np.full((gen.n_classes, props['embedding_size']), np.nan, dtype=np.float32)
+    
+    
+    snps_embeddings = np.full((gen.n_classes, embedding_size), np.nan, dtype=np.float32)
     
     for strain_id in gen.strain_ids:
         strain = gen.strain_codes.loc[strain_id, 'strain']
@@ -97,8 +68,7 @@ if __name__ == '__main__':
         snps = torch.autograd.Variable(snps)
         snps_embedding = model.snp_mapper(snps)
         snps_embeddings[strain_id] = snps_embedding.data.numpy()
-    #%%
-    
+    #%% save embeddings into file
     TABLE_FILTERS = tables.Filters(
         complevel=5,
         complib='zlib',
@@ -108,7 +78,7 @@ if __name__ == '__main__':
     
     fields2copy = ['experiments_data', 'snps_data', 'strains_codes']
     
-    with tables.File(data_file, 'r') as fid_old, \
+    with tables.File(gen.data_file, 'r') as fid_old, \
             tables.File(embeddings_file, "w") as fid_new:
         
         for field in fields2copy:
@@ -117,13 +87,14 @@ if __name__ == '__main__':
                              field,
                              obj=tab,
                              filters=TABLE_FILTERS)
-        gg = fid_new.create_group('/', 'index_groups')
+        
+        fid_new.create_group('/', 'index_groups')
         for field in ['train', 'test', 'val']:
-            tab = fid_old.get_node('/index_groups/' +field)[:]        
+            tab = fid_old.get_node('/index_groups/' +field)[:]    
             fid_new.create_array('/index_groups', 
                              field,
                              obj=tab)
-    #%%
+    
     with tables.File(embeddings_file, "r+") as fid:
         table_type = np.dtype([('experiment_id', np.int32),
                                ('worm_index', np.int32),
@@ -149,3 +120,38 @@ if __name__ == '__main__':
                              'snps_embeddings',
                              obj=snps_embeddings,
                              filters=TABLE_FILTERS)
+
+if __name__ == '__main__':
+    import glob
+    
+    if sys.platform == 'linux':
+        main_dir = os.environ['TMPDIR']
+    else:        
+        main_dir = '/Users/ajaver/OneDrive - Imperial College London/classify_strains/trained_models/ae_w_embeddings/'
+    
+    
+    
+    #model_path = os.path.join(main_dir, 'EmbeddingAEModel_R_L32_Clf1_Emb0.1_AE1_20171129_001223_checkpoint.pth.tar')
+    #model_path = os.path.join(main_dir, 'EmbeddingAEModel_R_L256_Clf1_Emb0.1_AE1_20171129_001337_checkpoint.pth.tar')
+    #model_path = os.path.join(main_dir, 'EmbeddingAEModel_R_L32_Clf0_Emb0.1_AE1_20171129_001219_checkpoint.pth.tar')
+    #model_path = os.path.join(main_dir, 'EmbeddingAEModel_R_L256_Clf0_Emb0.1_AE1_20171129_001213_checkpoint.pth.tar')
+    
+    dataset = 'CeNDR'
+    valid_strains = get_valid_strains(dataset, is_reduced=True)
+    data_file = get_datset_file(dataset)
+
+    generator = SkeletonsFlowFull(
+                            label_type = 'row_id',
+                            n_batch = 128, 
+                            data_file = data_file,
+                            sample_size_seconds = 10,
+                            sample_frequency_s = 0.04,
+                            is_return_snps = False,
+                            is_autoencoder = False,
+                            valid_strains = valid_strains
+                          )
+    
+    model_paths = glob.glob(os.path.join(main_dir, '*checkpoint.pth.tar'))
+    for fname in model_paths:
+        save_embeddings(fname, generator)
+    
