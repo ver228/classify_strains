@@ -33,8 +33,6 @@ class VAELoss(nn.Module):
 class VAE(nn.Module):
     def __init__(self, embedding_size=128):
         self.embedding_size = embedding_size
-        
-        
         super().__init__()
         self.cnn_encoder = nn.Sequential(
             nn.Conv2d(1, 32, 7, padding=3),
@@ -54,9 +52,7 @@ class VAE(nn.Module):
             nn.LeakyReLU(), 
             nn.MaxPool2d(2), #b, 256, 1, 1
         )
-        
-        
-        
+
         self.cnn_decoder = nn.Sequential(
             nn.ConvTranspose2d(256, 128, 7),  # b, 256, 7, 7
             nn.LeakyReLU(),
@@ -67,8 +63,7 @@ class VAE(nn.Module):
             nn.ConvTranspose2d(32, 16, 3, stride=2),  # b, 8, 63, 63
             nn.LeakyReLU(),
             nn.ConvTranspose2d(16, 1, 3, stride=2, output_padding=1),  # b, 1, 128, 128
-            nn.Sigmoid()
-            #nn.Tanh()
+            nn.Tanh()
         )
         
         self.fc_encoder_mu = nn.Linear(256, self.embedding_size)
@@ -93,8 +88,7 @@ class VAE(nn.Module):
         x = self.cnn_encoder(x_in).view(-1, 256)
         mu = self.fc_encoder_mu(x)
         logvar = self.fc_encoder_logvar(x)
-        z = self.reparameterize(mu, logvar)
-        return z, mu, logvar
+        return mu, logvar
     
     def decoder(self, z):
         x = self.fc_decoder(z)
@@ -102,9 +96,10 @@ class VAE(nn.Module):
         return x
     
     def forward(self, x_in):
-        z, mu, logvar = self.encoder(x_in)
-        x = self.decoder(z)
-        return x, mu, logvar
+        mu, logvar = self.encoder(x_in)
+        z = self.reparameterize(mu, logvar)
+        x_out = self.decoder(z)
+        return x_out, z, logvar
 
 class AE(nn.Module):
     def __init__(self, embedding_size = 256):
