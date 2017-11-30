@@ -13,6 +13,7 @@ source activate tierpsy
 
 ## copy temporary files
 cp $WORK/classify_strains/trained_models/ae_w_embeddings/*_checkpoint.pth.tar $TMPDIR
+cp $WORK/classify_strains/train_set/CeNDR_skel_smoothed.hdf5 $TMPDIR/
 
 python $HOME/classify_strains/experiments/skeletons_autoencoder/get_embeddings.py
 
