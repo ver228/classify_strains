@@ -44,7 +44,7 @@ def save_embeddings(model_path, gen):
     for ii, (input_v, row_ids) in enumerate(tqdm.tqdm(gen)):
         video_embedding = model.video_encoder(input_v)
         pred = model.classification(video_embedding).max(1)[1]
-        dat = [x.data.numpy() for x in (row_ids, video_embedding, pred)]    
+        dat = [x.data.cpu().numpy() for x in (row_ids, video_embedding, pred)]    
         results.append(dat)
         
     row_ids, embeddings, predictions = map(np.concatenate, zip(*results))
@@ -70,9 +70,12 @@ def save_embeddings(model_path, gen):
         snps = gen.snps_data[strain].values.T.astype(np.float32)
         
         snps = torch.from_numpy(snps).float()
+        if is_cuda:
+            snps = snps.cuda()
+        
         snps = torch.autograd.Variable(snps)
         snps_embedding = model.snp_mapper(snps)
-        snps_embeddings[strain_id] = snps_embedding.data.numpy()
+        snps_embeddings[strain_id] = snps_embedding.data.cpu().numpy()
     #%% save embeddings into file
     TABLE_FILTERS = tables.Filters(
         complevel=5,
@@ -154,7 +157,7 @@ if __name__ == '__main__':
                             is_return_snps = False,
                             is_autoencoder = False,
                             valid_strains = valid_strains,
-                            is_cuda=is_cuda
+                            is_cuda = is_cuda
                           )
     
     model_paths = glob.glob(os.path.join(main_dir, '*checkpoint.pth.tar'))
