@@ -12,8 +12,8 @@ module load cuda
 source activate tierpsy
 
 ## copy temporary files
-cp $WORK/classify_strains/classify_strains/trained_models/ae_w_embeddings/*_checkpoint.pth.tar $TMPDIR
+cp $WORK/classify_strains/trained_models/ae_w_embeddings/*_checkpoint.pth.tar $TMPDIR
 
 python $HOME/classify_strains/experiments/skeletons_autoencoder/get_embeddings.py
 
-cp $TMPDIR/*_embeddings.hdf5 $WORK/classify_strains/classify_strains/trained_models/ae_w_embeddings/
+cp $TMPDIR/*_embeddings.hdf5 $WORK/classify_strains/trained_models/ae_w_embeddings/
