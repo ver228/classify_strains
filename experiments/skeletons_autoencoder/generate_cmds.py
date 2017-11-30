@@ -37,7 +37,7 @@ if __name__ == '__main__':
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
     
-    time_str = '24:00:00'
+    
     
     main_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'train.py')
     
@@ -52,21 +52,21 @@ if __name__ == '__main__':
     )
 
     options = [
-           (256, 0.1, 1, 1),
-           (32, 0.1, 1, 1),
-           (256, 0.1, 0, 1),
-           (32, 0.1, 0, 1),
-           (256, 0.1, 1, 0),
-           (32, 0.1, 1, 0)
-           ]
+            (32, 0.1, 1, 1, True),
+            (64, 0.1, 1, 1, True),
+            (64, 1, 1, 1, True),
+            (64, 0.1, 1, 0, False),
+            (64, 0.1, 1, 1, False),
+            ]
 
     all_exp = []
-    for l, emb, clf, ae in options:
+    for l, emb, clf, ae, is_r in options:
        args = dft_params.copy()
        args['embedding_size'] = l
        args['embedding_loss_mixture'] = emb
        args['classification_loss_mixture'] = clf
        args['autoencoder_loss_mixture'] = ae
+       args['is_reduced'] = is_r
        all_exp.append(args)
 
 
@@ -79,6 +79,12 @@ if __name__ == '__main__':
     )
     
     for args in all_exp:
+        if args['is_reduced']:
+            time_str = '24:00:00'
+        else:
+            time_str = '48:00:00'
+        
+        
         args_d = ' '.join(['--{} {}'.format(*d) for d in args.items()])
         cmd_str = 'python {} {}'.format(main_file, args_d)
         

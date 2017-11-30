@@ -137,8 +137,6 @@ if __name__ == '__main__':
     else:        
         main_dir = '/Users/ajaver/OneDrive - Imperial College London/classify_strains/trained_models/ae_w_embeddings/'
     
-    
-    
     #model_path = os.path.join(main_dir, 'EmbeddingAEModel_R_L32_Clf1_Emb0.1_AE1_20171129_001223_checkpoint.pth.tar')
     #model_path = os.path.join(main_dir, 'EmbeddingAEModel_R_L256_Clf1_Emb0.1_AE1_20171129_001337_checkpoint.pth.tar')
     #model_path = os.path.join(main_dir, 'EmbeddingAEModel_R_L32_Clf0_Emb0.1_AE1_20171129_001219_checkpoint.pth.tar')
