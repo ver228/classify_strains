@@ -13,6 +13,8 @@ import tqdm
 import numpy as np
 import tables
 
+is_cuda = torch.cuda.is_available()
+
 #Be sure to use abspath linux does not give the path if one uses __file__
 _BASEDIR = os.path.dirname(os.path.abspath(__file__))
 src_dir = os.path.join(_BASEDIR, os.pardir, os.pardir, 'src')
@@ -33,6 +35,9 @@ def save_embeddings(model_path, gen):
     
     model = EmbeddingAEModel(gen.n_classes, gen.n_snps, embedding_size)
     model.load_from_file(model_path)
+    
+    if is_cuda:
+        model = model.cuda()
     
     #%% Get video embeddings
     results = []
@@ -148,7 +153,8 @@ if __name__ == '__main__':
                             sample_frequency_s = 0.04,
                             is_return_snps = False,
                             is_autoencoder = False,
-                            valid_strains = valid_strains
+                            valid_strains = valid_strains,
+                            is_cuda=is_cuda
                           )
     
     model_paths = glob.glob(os.path.join(main_dir, '*checkpoint.pth.tar'))
