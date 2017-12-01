@@ -18,7 +18,7 @@ class VAELoss(nn.Module):
 
     def forward(self, output, target):
         decoded, mu, logvar = output
-        BCE = F.binary_cross_entropy(decoded, target)
+        BCE = F.mse_loss(decoded, target)
     
         # see Appendix B from VAE paper:
         # Kingma and Welling. Auto-Encoding Variational Bayes. ICLR, 2014
