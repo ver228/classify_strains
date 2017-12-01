@@ -46,7 +46,7 @@ class AE3D(nn.Module):
             nn.ConvTranspose3d(16, 16, 3, stride=2),  # b, 1, 127, 127
             nn.LeakyReLU(),
             nn.ConvTranspose3d(16, 1, 3, stride=(2,1,1)),  # b, 1, 255, 129, 129
-            nn.Sigmoid()
+            nn.Tanh()
         )
         for m in self.modules():
             if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d)):
