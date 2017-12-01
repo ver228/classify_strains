@@ -44,6 +44,10 @@ class FullVAELoss(nn.Module):
         classification, video_embedding, snps_embedding, video_decoded = output_v
         target_classes, video_original = input_v
         
+        KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
+        # Normalise by same number of elements as in reconstruction
+        KLD /= decoded.view(-1).size(0)
+        
         loss = 0
         if self.classification_loss_mixture > 0:
             clf_loss = self.classification_loss(classification, target_classes)
