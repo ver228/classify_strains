@@ -24,7 +24,7 @@ def weights_init_xavier(m):
         nn.init.constant(m.bias.data, 0.0)
 
 
-class FullAELoss(nn.Module):
+class FullVAELoss(nn.Module):
     def __init__(self,
                  classification_loss_mixture=1.,
                  embedding_loss_mixture=0.1, 
@@ -38,6 +38,7 @@ class FullAELoss(nn.Module):
         self.classification_loss = nn.CrossEntropyLoss()
         self.autoencoder_loss = nn.MSELoss()
         self.embedding_loss = F.mse_loss
+        
         
     def forward(self, output_v, input_v):
         classification, video_embedding, snps_embedding, video_decoded = output_v
@@ -147,10 +148,6 @@ class EmbeddingVAE(nn.Module):
         )
         self.classification = nn.Linear(embedding_size, n_classes)
         
-        self.encoder_fc_logvar = nn.Sequential(
-            nn.Linear(256, num_output)
-        )
-
         for m in self.snp_mapper.modules():
             weights_init_xavier(m)
             
@@ -160,7 +157,7 @@ class EmbeddingVAE(nn.Module):
     def reparameterize(self, mu, logvar):
         if self.training:
           std = torch.exp(logvar*0.5)
-          eps = Variable(std.data.new(std.size()).normal_())
+          eps = torch.autograd.Variable(std.data.new(std.size()).normal_())
           return eps.mul(std).add_(mu)
         else:
           return mu
@@ -170,7 +167,8 @@ class EmbeddingVAE(nn.Module):
         video_embedding = self.video_encoder(video_input)
         classification = self.classification(video_embedding)
 
-        video_embedding_z = self.reparameterize(self.video_encoder.mu, self.video_encoder.logvar)
+        video_embedding_z = self.reparameterize(self.video_encoder.mu, 
+                                                self.video_encoder.logvar)
         snps_embedding = self.snp_mapper(snps)        
         video_decoded = self.video_decoder(video_embedding_z)
         return classification, video_embedding_z, snps_embedding, video_decoded
