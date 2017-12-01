@@ -140,10 +140,10 @@ def results_VAE(mask_file, feat_file):
     all_imgs = sorted(all_imgs, key = lambda x : x[0])
     #%%
     m, mod = all_models[0]
-    embedding, _, _ =  mod.encoder(X)
+    embedding =  mod.encoder(X)[0]
     decoded = mod.decoder(embedding)
     
-    n1,n2 = 18, 25
+    n1,n2 = 5, 3
     xd = decoded.data.squeeze().numpy()
     
     plt.figure(figsize=(15, 5))
@@ -176,7 +176,7 @@ def results_VAE(mask_file, feat_file):
             plt.subplot(1,n_models+1, n_i+2)
             plt.imshow(imgs[ii], interpolation=None, cmap='gray')
             plt.title(n)        
-        #plt.savefig('VAE_{}.png'.format(ii))
+        plt.savefig('VAE_{}.png'.format(ii))
         
     
         #%%
