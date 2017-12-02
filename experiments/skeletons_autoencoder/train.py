@@ -17,11 +17,12 @@ src_dir = os.path.join(_BASEDIR, os.pardir, os.pardir, 'src')
 sys.path.append(src_dir)
 
 from classify.trainer import init_generator, Trainer
-from models import EmbeddingAEModelS, FullAELoss
+import models 
 
-#data_file = '/Users/ajaver/OneDrive - Imperial College London/classify_strains/train_data/_old/CeNDR_skel_smoothed.hdf5'
+data_file = '/Users/ajaver/OneDrive - Imperial College London/classify_strains/train_data/_old/CeNDR_skel_smoothed.hdf5'
 def main(
-    data_file = None, #get defaults
+    model_name = 'EmbeddingAEModelS',
+    data_file = data_file, #get defaults
     is_reduced = True,
     embedding_size = 256,
     sample_size_seconds = 10,
@@ -32,7 +33,6 @@ def main(
     classification_loss_mixture = 1.,
     autoencoder_loss_mixture = 1.
     ):
-    model_name = 'EmbeddingAEModelS'
     
     if sys.platform == 'linux':
         log_dir_root = '/work/ajaver/classify_strains/results'
@@ -62,11 +62,14 @@ def main(
     )
     _, train_generator, test_generator = init_generator(**params)
     
-    model = EmbeddingAEModelS(train_generator.n_classes, 
+
+    assert model_name in dir(models)
+    get_model_func = getattr(models, model_name)
+    model = get_model_func(train_generator.n_classes, 
                            train_generator.n_snps, 
                            embedding_size)
     
-    criterion = FullAELoss(
+    criterion = models.FullAELoss(
                 classification_loss_mixture = classification_loss_mixture,
                 embedding_loss_mixture = embedding_loss_mixture, 
                 autoencoder_loss_mixture = autoencoder_loss_mixture

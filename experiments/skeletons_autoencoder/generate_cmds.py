@@ -42,6 +42,7 @@ if __name__ == '__main__':
     main_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'train.py')
     
     dft_params = OrderedDict(
+        model_name = '',
         is_reduced = True,
         n_batch = 64,
         embedding_size = 256,
@@ -52,20 +53,16 @@ if __name__ == '__main__':
     )
 
     options = [
-            (256, 0.1, 1, 0, False),
-            (256, 0.1, 0, 1, False),
-            (256, 0.1, 1, 1, False)
-            # (32, 0.1, 1, 1, True),
-            # (64, 0.1, 1, 1, True),
-            # (64, 1, 1, 1, True),
-            # (64, 0.1, 1, 0, False),
-            # (64, 0.1, 0, 1, False),
-            # (64, 0.1, 1, 1, False)
+            ('Resnet18Emb', 256, 0.1, 1, 0, False),
+            ('Resnet34Emb', 256, 0.1, 1, 0, False),
+            ('Resnet50Emb', 256, 0.1, 1, 0, False),
+            ('Resnet101Emb', 256, 0.1, 1, 0, False)
             ]
 
     all_exp = []
-    for l, emb, clf, ae, is_r in options:
+    for mod, l, emb, clf, ae, is_r in options:
        args = dft_params.copy()
+       args['model_name'] = mod
        args['embedding_size'] = l
        args['embedding_loss_mixture'] = emb
        args['classification_loss_mixture'] = clf
@@ -75,6 +72,7 @@ if __name__ == '__main__':
 
 
     short_add = OrderedDict(
+        model_name = lambda x : x,
         embedding_size = lambda x : 'L{}'.format(x),
         embedding_loss_mixture = lambda x : 'Emb{}'.format(x),
         classification_loss_mixture = lambda x : 'Clf{}'.format(x) ,

@@ -204,3 +204,86 @@ class EmbeddingAEModelS(nn.Module):
         self.load_state_dict(checkpoint['state_dict'])
         self.eval()
         return self
+
+#%% Resnets!!!
+from classify.models.resnet import ResNetS, BasicBlock, Bottleneck
+class ResnetsAE(nn.Module):
+    def __init__(self, encoder_model, n_classes, snps_size, embedding_size):
+        super().__init__()
+        self.video_encoder = encoder_model
+        self.video_decoder = CNNDecoder(embedding_size)
+        self.embedding_size = embedding_size
+        self.snps_size = snps_size
+        
+        self.snp_mapper = nn.Sequential(
+            nn.Linear(snps_size, embedding_size)
+        )
+        self.classification = nn.Linear(embedding_size, n_classes)
+        
+        for m in self.snp_mapper.modules():
+            weights_init_xavier(m)
+            
+        for m in self.classification.modules():
+            weights_init_xavier(m)
+
+    def forward(self, input_d):
+        video_input, snps = input_d
+        
+        video_embedding = self.video_encoder(video_input)
+        classification = self.classification(video_embedding)
+        snps_embedding = self.snp_mapper(snps)
+        
+        video_decoded = self.video_decoder(video_embedding)
+        return classification, video_embedding, snps_embedding, video_decoded
+    
+    
+    def load_from_file(self, model_path):
+        checkpoint = torch.load(model_path, map_location=lambda storage, loc: storage)
+        self.load_state_dict(checkpoint['state_dict'])
+        self.eval()
+        return self
+
+def Resnet18Emb(n_classes, snps_size, embedding_size):
+    encoder_model = ResNetS(BasicBlock, 
+                    [2, 2, 2, 2], 
+                    avg_pool_kernel = (7,1),
+                    n_channels = 1, 
+                    num_classes = embedding_size
+                    )
+    model = ResnetsAE(encoder_model, n_classes, snps_size, embedding_size)
+    return model
+
+def Resnet34Emb(n_classes, snps_size, embedding_size):
+    encoder_model = ResNetS(BasicBlock, 
+                    [3, 4, 6, 3], 
+                    avg_pool_kernel = (7,1),
+                    n_channels = 1, 
+                    num_classes = embedding_size
+                    )
+    model = ResnetsAE(encoder_model, n_classes, snps_size, embedding_size)
+    return model
+
+def Resnet50Emb(n_classes, snps_size, embedding_size):
+    encoder_model = ResNetS(Bottleneck, 
+                    [3, 4, 6, 3], 
+                    avg_pool_kernel = (7,1),
+                    n_channels = 1, 
+                    num_classes = embedding_size
+                    )
+    model = ResnetsAE(encoder_model, n_classes, snps_size, embedding_size)
+    return model
+
+def Resnet101Emb(n_classes, snps_size, embedding_size):
+    encoder_model = ResNetS(Bottleneck, 
+                    [3, 4, 23, 3], 
+                    avg_pool_kernel = (7,1),
+                    n_channels = 1, 
+                    num_classes = embedding_size
+                    )
+    model = ResnetsAE(encoder_model, n_classes, snps_size, embedding_size)
+    return model
+
+
+
+
+
