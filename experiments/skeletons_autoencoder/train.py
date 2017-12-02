@@ -19,10 +19,10 @@ sys.path.append(src_dir)
 from classify.trainer import init_generator, Trainer
 import models 
 
-data_file = '/Users/ajaver/OneDrive - Imperial College London/classify_strains/train_data/_old/CeNDR_skel_smoothed.hdf5'
+#data_file = '/Users/ajaver/OneDrive - Imperial College London/classify_strains/train_data/_old/CeNDR_skel_smoothed.hdf5'
 def main(
     model_name = 'EmbeddingAEModelS',
-    data_file = data_file, #get defaults
+    data_file = None, #get defaults
     is_reduced = True,
     embedding_size = 256,
     sample_size_seconds = 10,
