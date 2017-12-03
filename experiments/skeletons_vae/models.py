@@ -41,14 +41,17 @@ class FullVAELoss(nn.Module):
         
         
     def forward(self, output_v, input_v):
-        classification, video_embedding, snps_embedding, video_decoded = output_v
+        classification, video_output, snps_embedding, video_decoded = output_v
+        video_embedding, v_mu, v_logvar = video_output
         target_classes, video_original = input_v
-        
-        KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
-        # Normalise by same number of elements as in reconstruction
-        KLD /= decoded.view(-1).size(0)
-        
+
         loss = 0
+
+        KLD = -0.5 * torch.sum(1 + v_logvar - v_mu.pow(2) - v_logvar.exp())
+        # Normalise by same number of elements as in reconstruction
+        KLD /= video_decoded.view(-1).size(0)
+        loss += KLD
+
         if self.classification_loss_mixture > 0:
             clf_loss = self.classification_loss(classification, target_classes)
             loss += clf_loss*self.classification_loss_mixture
@@ -175,7 +178,10 @@ class EmbeddingVAE(nn.Module):
                                                 self.video_encoder.logvar)
         snps_embedding = self.snp_mapper(snps)        
         video_decoded = self.video_decoder(video_embedding_z)
-        return classification, video_embedding_z, snps_embedding, video_decoded
+
+        video_output = (video_embedding_z, self.video_encoder.mu, self.video_encoder.logvar)
+
+        return classification, video_output, snps_embedding, video_decoded
     
     
     def load_from_file(self, model_path):
