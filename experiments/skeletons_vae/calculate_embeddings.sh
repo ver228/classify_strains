@@ -12,9 +12,10 @@ module load cuda
 source activate tierpsy
 
 ## copy temporary files
-cp $WORK/classify_strains/trained_models/vae_w_embeddings/*_checkpoint.pth.tar $TMPDIR
+mkdir -p $TMPDIR/vae_w_embeddings
+cp $WORK/classify_strains/trained_models/vae_w_embeddings/*_checkpoint.pth.tar $TMPDIR/vae_w_embeddings
 cp $WORK/classify_strains/train_set/CeNDR_skel_smoothed.hdf5 $TMPDIR/
 
 python $HOME/classify_strains/experiments/skeletons_vae/get_embeddings.py
 
-cp $TMPDIR/*_embeddings.hdf5 $WORK/classify_strains/trained_models/vae_w_embeddings/
+cp $TMPDIR/vae_w_embeddings/*_embeddings.hdf5 $WORK/classify_strains/trained_models/vae_w_embeddings/

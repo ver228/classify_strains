@@ -14,6 +14,8 @@ import numpy as np
 import tables
 
 is_cuda = torch.cuda.is_available()
+import models
+
 
 #Be sure to use abspath linux does not give the path if one uses __file__
 _BASEDIR = os.path.dirname(os.path.abspath(__file__))
@@ -21,7 +23,6 @@ src_dir = os.path.join(_BASEDIR, os.pardir, os.pardir, 'src')
 sys.path.append(src_dir)
 
 from classify.flow import SkeletonsFlowFull, get_valid_strains, get_datset_file
-import models
 
 def save_embeddings(model_path):
     bn = os.path.basename(model_path)
@@ -153,9 +154,9 @@ if __name__ == '__main__':
     import glob
     
     if sys.platform == 'linux':
-        main_dir = os.environ['TMPDIR']
+        main_dir = os.path.join(os.environ['TMPDIR'], 'vae_w_embeddings')
     else:        
-        main_dir = '/Users/ajaver/OneDrive - Imperial College London/classify_strains/trained_models/ae_w_embeddings/'
+        main_dir = '/Users/ajaver/OneDrive - Imperial College London/classify_strains/trained_models/vae_w_embeddings/'
     
     #model_path = os.path.join(main_dir, 'EmbeddingAEModel_R_L32_Clf1_Emb0.1_AE1_20171129_001223_checkpoint.pth.tar')
     #model_path = os.path.join(main_dir, 'EmbeddingAEModel_R_L256_Clf1_Emb0.1_AE1_20171129_001337_checkpoint.pth.tar')
