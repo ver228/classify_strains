@@ -59,16 +59,9 @@ if __name__ == '__main__':
         all_exp.append(args)
 
 
-    # max_n_frames = [-1, 2]
-    # for tt in max_n_frames:
-    #     args = dft_params.copy()
-    #     args['max_n_frames'] = tt
-    #     all_exp.append(args)
-
-    # short_add = OrderedDict(
-    #     model_name = lambda x : x,
-    #     max_n_frames = lambda x : 'tiny{}'.format(x) if x > 0 else ''
-    # )
+    short_add = OrderedDict(
+         model_name = lambda x : x
+     )
     
     for args in all_exp:
         args_d = ' '.join(['--{} {}'.format(*d) for d in args.items()])
