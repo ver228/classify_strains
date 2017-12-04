@@ -10,8 +10,14 @@ import os
 import glob
 import shutil
 
-dst_dir = '/Users/ajaver/OneDrive - Imperial College London/classify_strains/trained_models/ae_w_embeddings'
-log_dir = '/Users/ajaver/OneDrive - Imperial College London/classify_strains/logs/skeletons_autoencoder'
+#dst_dir = '/Users/ajaver/OneDrive - Imperial College London/classify_strains/trained_models/ae_w_embeddings'
+#log_dir = '/Users/ajaver/OneDrive - Imperial College London/classify_strains/logs/skeletons_autoencoder'
+log_dir = '/work/ajaver/classify_strains/results/skeletons_autoencoder/'
+dst_dir = '/work/ajaver/classify_strains/trained_models/ae_w_embeddings/'
+
+#log_dir = '/work/ajaver/classify_strains/results/skeletons_vae/'
+#dst_dir = '/work/ajaver/classify_strains/trained_models/vae_w_embeddings/'
+
 
 fnames = glob.glob(os.path.join(log_dir, '**', 'checkpoint*'), recursive=True)
 

@@ -21,19 +21,39 @@ src_dir = os.path.join(_BASEDIR, os.pardir, os.pardir, 'src')
 sys.path.append(src_dir)
 
 from classify.flow import SkeletonsFlowFull, get_valid_strains, get_datset_file
-from models import EmbeddingAEModel
+import models
 
-def save_embeddings(model_path, gen):
-    
-    embeddings_file = model_path.replace('_checkpoint.pth.tar', '_embeddings.hdf5')
-    
+def save_embeddings(model_path):
     bn = os.path.basename(model_path)
     parts = bn.split('_')    
+    model_name = parts[0]
     embedding_size = [int(x[1:]) for x in parts if x.startswith('L')][0]
+    is_reduced = False #get all the strains, even if it was not trained with them
+    #is_reduced = any(x=='R' for x in parts)
+
+    dataset = 'CeNDR'
+    valid_strains = get_valid_strains(dataset, is_reduced = is_reduced)
+    data_file = get_datset_file(dataset)
+
+    generator = SkeletonsFlowFull(
+                            label_type = 'row_id',
+                            n_batch = 128, 
+                            data_file = data_file,
+                            sample_size_seconds = 10,
+                            sample_frequency_s = 0.04,
+                            is_return_snps = False,
+                            is_autoencoder = False,
+                            valid_strains = valid_strains,
+                            is_cuda = is_cuda
+                          )
+
+    embeddings_file = model_path.replace('_checkpoint.pth.tar', '_embeddings.hdf5')
     
     
-    
-    model = EmbeddingAEModel(gen.n_classes, gen.n_snps, embedding_size)
+    get_model_func = getattr(models, model_name)
+    model = get_model_func(gen.n_classes, 
+                           gen.n_snps, 
+                           embedding_size)
     model.load_from_file(model_path)
     
     if is_cuda:
@@ -142,23 +162,7 @@ if __name__ == '__main__':
     #model_path = os.path.join(main_dir, 'EmbeddingAEModel_R_L32_Clf0_Emb0.1_AE1_20171129_001219_checkpoint.pth.tar')
     #model_path = os.path.join(main_dir, 'EmbeddingAEModel_R_L256_Clf0_Emb0.1_AE1_20171129_001213_checkpoint.pth.tar')
     
-    dataset = 'CeNDR'
-    valid_strains = get_valid_strains(dataset, is_reduced=True)
-    data_file = get_datset_file(dataset)
-
-    generator = SkeletonsFlowFull(
-                            label_type = 'row_id',
-                            n_batch = 128, 
-                            data_file = data_file,
-                            sample_size_seconds = 10,
-                            sample_frequency_s = 0.04,
-                            is_return_snps = False,
-                            is_autoencoder = False,
-                            valid_strains = valid_strains,
-                            is_cuda = is_cuda
-                          )
-    
     model_paths = glob.glob(os.path.join(main_dir, '*checkpoint.pth.tar'))
     for fname in model_paths:
-        save_embeddings(fname, generator)
+        save_embeddings(fname)
     
