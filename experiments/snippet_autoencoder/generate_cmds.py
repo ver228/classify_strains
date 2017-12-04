@@ -37,7 +37,7 @@ if __name__ == '__main__':
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
     
-    time_str = '24:00:00'
+    time_str = '48:00:00'
     
     main_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'train.py')
     
@@ -48,20 +48,27 @@ if __name__ == '__main__':
          roi_size = 128,
          n_epochs = 1000,
          embedding_size = 256,
-         max_n_frames = -1
+         max_n_frames = -1,
+         pretrained_path = ''
     )
     all_exp = []
-
-    max_n_frames = [-1, 2]
-    for tt in max_n_frames:
+    pretrained = ['/work/ajaver/classify_strains/results/snippet_autoencoder/AE3D_L256_20171201_092555/checkpoint.pth.tar']
+    for fname in pretrained:
         args = dft_params.copy()
-        args['max_n_frames'] = tt
+        args['pretrained_path'] = fname
         all_exp.append(args)
 
-    short_add = OrderedDict(
-        model_name = lambda x : x,
-        max_n_frames = lambda x : 'tiny{}'.format(x) if x > 0 else ''
-    )
+
+    # max_n_frames = [-1, 2]
+    # for tt in max_n_frames:
+    #     args = dft_params.copy()
+    #     args['max_n_frames'] = tt
+    #     all_exp.append(args)
+
+    # short_add = OrderedDict(
+    #     model_name = lambda x : x,
+    #     max_n_frames = lambda x : 'tiny{}'.format(x) if x > 0 else ''
+    # )
     
     for args in all_exp:
         args_d = ' '.join(['--{} {}'.format(*d) for d in args.items()])

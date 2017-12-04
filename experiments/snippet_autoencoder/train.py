@@ -51,11 +51,18 @@ def main(model_name='AE3D',
          roi_size = 128,
          n_epochs = 10000,
          embedding_size = 256,
-         max_n_frames = -1
+         max_n_frames = -1,
+         pretrained_path = ''
          ):
     #%%
     if 'AE3D':
         model = AE3D(embedding_size)
+    
+    if os.path.exists(pretrained_path):
+        print("Loading pretrained weigths")
+        checkpoint = torch.load(pretrained_path, map_location=lambda storage, loc: storage)
+        model.load_state_dict(checkpoint['state_dict'])
+        
     criterion = nn.MSELoss()
     
     if max_n_frames> 0:
