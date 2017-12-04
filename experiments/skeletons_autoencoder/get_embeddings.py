@@ -153,7 +153,7 @@ if __name__ == '__main__':
     import glob
     
     if sys.platform == 'linux':
-        main_dir = os.environ['TMPDIR']
+        main_dir = os.path.join(os.environ['TMPDIR'], 'ae_w_embeddings')
     else:        
         main_dir = '/Users/ajaver/OneDrive - Imperial College London/classify_strains/trained_models/ae_w_embeddings/'
     
