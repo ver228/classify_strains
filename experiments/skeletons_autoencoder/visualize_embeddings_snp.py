@@ -17,6 +17,7 @@ import os
 import sys
 import torch
 import seaborn as sns
+from matplotlib.backends.backend_pdf import PdfPages
 
 src_dir = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, 'src')
 sys.path.append(src_dir)
@@ -34,7 +35,8 @@ def load_embeddings(embeddings_file, is_reduced=True, valid_set = 'test'):
         strains_codes = fid['/strains_codes']
     
     valid_strain = get_valid_strains('CeNDR', is_reduced=is_reduced)
-    embedding_groups = embedding_groups[embedding_groups['strain'].isin(valid_strain)]
+    if valid_strain is not None:
+        embedding_groups = embedding_groups[embedding_groups['strain'].isin(valid_strain)]
     
     with tables.File(embeddings_file, "r") as fid:
         if valid_set and valid_set is not None:
@@ -79,23 +81,7 @@ def get_embeddings_pearson(snps_embeddings, video_embeddings):
     pcoeff, pvalue = map(np.array, zip(*dat))
     return pcoeff, pvalue
 
-def get_embeddings_tsne(embeddings, strains_lab, n_samples = 500):
-    
-    x_inds, Y = [], []
-    s_g = pd.DataFrame(np.array(strains_lab), columns=['strain']).groupby('strain')
-    for s, inds in s_g.groups.items():
-        x_inds += random.sample(list(inds), n_samples)
-        Y += [s]*n_samples
-    Y = np.array(Y)
-    x_inds = np.array(x_inds)
-    X = embeddings[x_inds]
-    #X_embedded = PCA(n_components=3).fit_transform(X)
-    X_embedded = TSNE(n_components=2, verbose=1, n_iter=300).fit_transform(X)
 
-    df = pd.DataFrame(X_embedded[:, :2], columns=['X1', 'X2'])
-    df['strain'] = Y
-
-    return df
 #%%
 def _get_file_parts(embeddings_file):
     def isfloat(value):
@@ -122,15 +108,16 @@ if __name__ == '__main__':
     import glob
     import multiprocessing as mp
     
-    def _process_row(embeddings_file):
+    def _process_row(embeddings_file, is_reduced=False, valid_set = 'test'):
         print(embeddings_file)
-        snps_emb, video_emb, strains_l = load_embeddings(embeddings_file)
+        snps_emb, video_emb, strains_l = load_embeddings(embeddings_file, 
+                                                         is_reduced=is_reduced, 
+                                                         valid_set=valid_set)
         pcoeff, pvalue = get_embeddings_pearson(snps_emb, video_emb)
-        df = get_embeddings_tsne(video_emb, strains_l)
         
         lab = _get_file_parts(embeddings_file)
         
-        val = ((snps_emb, video_emb, strains_l), (pcoeff, df))
+        val = ((snps_emb, video_emb, strains_l), (pcoeff))
         return lab, val
         
     #main_dir = '/Users/ajaver/OneDrive - Imperial College London/classify_strains/trained_models/ae_w_embeddings/20171129_reduced'
@@ -152,38 +139,77 @@ if __name__ == '__main__':
         available_n_embeddings = sorted(list(set(x[1] for x in valid_k)))
         subplot_n = {k:ii+1 for ii,k in enumerate(available_n_embeddings)}
         
-        
         plt.figure()
         legends = {}
         for k in valid_k:
             model_name, n_embeddings, is_clf, is_ae, mix_val, _ = k
-            dat = all_data[k]
+            (snps_emb, video_emb, strains_l), (pcoeff) = all_data[k]
             lab_str = 'AE={} Clf={} Mix={}'.format(is_ae,is_clf, mix_val)
             
-            pcoeff = dat[1][0]
             plt.subplot(2,1,subplot_n[n_embeddings])
             dd = plt.plot(np.sort(pcoeff), label=lab_str)
-        
-        
+       
         plt.suptitle('is_reduced={}'.format(is_reduced))
         for n_embeddings in subplot_n:
             nn = subplot_n[n_embeddings]
             plt.subplot(2,1,nn)
             plt.legend(loc=0)
             plt.xlim((-1, n_embeddings+1))
-            
         
-        all_df = []
+        
         for k in valid_k:
             model_name, n_embeddings, is_clf, is_ae, mix_val, _ = k
-            dat = all_data[k]
-            (pcoeff, df) = dat[1]
+            (snps_emb, video_emb, strains_l), (pcoeff) = all_data[k]
+            g_s  = pd.DataFrame(strains_l, columns=['strain']).groupby('strain').groups
             
-            df['n_embeddings'] = n_embeddings
-            df['m'] = 'AE={} Clf={} Mix={}'.format(is_ae, is_clf, mix_val)
-            all_df.append(df)
+            
+            inds = np.argsort(pcoeff)
+            
+            
+            
+            v_mean = []
+            snps = []
+            strains = []
+            for ss, ind in g_s.items():
+                v_mean.append(np.mean(video_emb[ind], axis=0))
+                snps.append(snps_emb[ind[0]])
+                strains.append(ss)
+            v_mean = np.vstack(v_mean)
+            snps = np.vstack(snps)
+            #%%
+            lab_str = 'L{}_AE={}_Clf={}_Mix={}'.format(n_embeddings, is_ae,is_clf, mix_val)
+            
+            save_name = 'JoinPlots_{}.pdf'.format(lab_str)
+            if is_reduced:
+                save_name = 'R_' + save_name
+            
+            save_name = os.path.join(os.path.dirname(main_dir), save_name)
+            
+            with PdfPages(save_name) as pdf:    
+                for nn in inds[::-1]:
+                    print(nn)
+                    
+                    sns.jointplot(x=v_mean[:,nn].T, y=snps[:,nn].T, ratio=2, size=5);
+                    pdf.savefig() 
+                    plt.close()
+            #%%
+            
+            
+            
+        #%%
         
-        all_df = pd.concat(all_df)
-    
-        sns.lmplot('X1', 'X2', data=all_df, hue='strain', fit_reg=False, col='m', row='n_embeddings')
-        plt.suptitle('is_reduced={}'.format(is_reduced))
+    #%%
+#        all_df = []
+#        for k in valid_k:
+#            model_name, n_embeddings, is_clf, is_ae, mix_val, _ = k
+#            dat = all_data[k]
+#            (pcoeff, df) = dat[1]
+#            
+#            df['n_embeddings'] = n_embeddings
+#            df['m'] = 'AE={} Clf={} Mix={}'.format(is_ae, is_clf, mix_val)
+#            all_df.append(df)
+#        
+#        all_df = pd.concat(all_df)
+#    
+#        sns.lmplot('X1', 'X2', data=all_df, hue='strain', fit_reg=False, col='m', row='n_embeddings')
+#        plt.suptitle('is_reduced={}'.format(is_reduced))
