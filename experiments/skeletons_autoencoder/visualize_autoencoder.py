@@ -10,7 +10,6 @@ import os
 import sys
 import torch
 import matplotlib.pylab as plt
-from models import EmbeddingAEModel
 
 #Be sure to use abspath linux does not give the path if one uses __file__
 _BASEDIR = os.path.dirname(os.path.abspath(__file__))
@@ -18,6 +17,7 @@ src_dir = os.path.join(_BASEDIR, os.pardir, os.pardir, 'src')
 sys.path.append(src_dir)
 
 from classify.flow import SkeletonsFlowShuffled, SkeletonsFlowFull, get_valid_strains, get_datset_file
+from models import EmbeddingAEModel
 
 def load_model(model_path, n_classes, n_snps, embedding_size):
     model = EmbeddingAEModel(n_classes, n_snps, embedding_size)
@@ -43,7 +43,7 @@ if __name__ == '__main__':
     valid_strains = get_valid_strains(dataset, is_reduced=True)
     data_file = get_datset_file(dataset)
     
-    
+    #data_file = '/Users/ajaver/OneDrive - Imperial College London/classify_strains/train_data/_old/CeNDR_skel_smoothed.hdf5'
     gen = SkeletonsFlowShuffled(
             set_type = 'train',
             data_file = data_file,
