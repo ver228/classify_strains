@@ -67,7 +67,7 @@ def _h_eigenworms(skeletons, is_normalized, n_components = 6):
     eigenworms = np.dot(angles, EIGENWORMS_COMPONENTS[:n_components].T)
     
     if is_normalized:
-        eigenworms = (eigenworms-EIGENWORM_SCALING_FACTOR[4:,0])/EIGENWORM_SCALING_FACTOR[4:,1]
+        eigenworms = (eigenworms-EIGENWORM_SCALING_FACTOR[:,0])/EIGENWORM_SCALING_FACTOR[4:,1]
     return eigenworms
 
 def _h_eigenworms_full(skeletons, is_normalized, n_components = 6):

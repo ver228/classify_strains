@@ -25,7 +25,7 @@ if __name__ == '__main__':
     #model_file = '/Users/ajaver/OneDrive - Imperial College London/classify_strains/logs/snippet_autoencoder/AE3D__tiny2L256_20171129_171930/checkpoint.pth.tar'
     #model_file = '/Users/ajaver/OneDrive - Imperial College London/classify_strains/logs/snippet_autoencoder/AE3D_L256_20171128_150429/checkpoint.pth.tar'
     #model_file = '/Users/ajaver/OneDrive - Imperial College London/classify_strains/logs/snippet_autoencoder/AE3D_L256_20171129_155641/checkpoint.pth.tar'
-    model_file = '/Users/ajaver/OneDrive - Imperial College London/classify_strains/logs/snippet_autoencoder/AE3D_L256_20171201_092555/checkpoint.pth.tar'
+    model_file = '/Users/ajaver/OneDrive - Imperial College London/classify_strains/logs/snippet_autoencoder/AE3D_L256_20171206_145027/checkpoint.pth.tar'
     model = AE3D(256)
     
     checkpoint = torch.load(model_file, map_location=lambda storage, loc: storage)

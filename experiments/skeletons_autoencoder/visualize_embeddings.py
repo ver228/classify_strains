@@ -132,11 +132,12 @@ if __name__ == '__main__':
         
         val = ((snps_emb, video_emb, strains_l), (pcoeff, df))
         return lab, val
-        
+    
+    #main_dir = '/Users/ajaver/OneDrive - Imperial College London/classify_strains/trained_models/vae_w_embeddings/'    
     #main_dir = '/Users/ajaver/OneDrive - Imperial College London/classify_strains/trained_models/ae_w_embeddings/20171129_reduced'
     #main_dir = '/Users/ajaver/OneDrive - Imperial College London/classify_strains/trained_models/ae_w_embeddings/20171130_full'
-    main_dir = '/Users/ajaver/OneDrive - Imperial College London/classify_strains/trained_models/vae_w_embeddings/'
-
+    main_dir = '/Users/ajaver/OneDrive - Imperial College London/classify_strains/trained_models/ae_w_embeddings/20171130_reduced'
+    
     fnames = glob.glob(os.path.join(main_dir, '*_embeddings.hdf5'))
     
     p = mp.Pool()
@@ -146,14 +147,16 @@ if __name__ == '__main__':
     #%% Plot coeff
     for is_reduced in [True, False]:
         valid_k = [k for k in all_data.keys() if k[-1] == is_reduced]
+        valid_k = sorted(valid_k)
         if not valid_k:
             continue
         
         available_n_embeddings = sorted(list(set(x[1] for x in valid_k)))
         subplot_n = {k:ii+1 for ii,k in enumerate(available_n_embeddings)}
         
+        #%%
+        fig = plt.figure()
         
-        plt.figure()
         legends = {}
         for k in valid_k:
             model_name, n_embeddings, is_clf, is_ae, mix_val, _ = k
@@ -171,7 +174,15 @@ if __name__ == '__main__':
             plt.subplot(2,1,nn)
             plt.legend(loc=0)
             plt.xlim((-1, n_embeddings+1))
-            
+        
+        plt.xlabel('Embedding Index')
+        #plt.ylabel('SNP-Angles Pearson Coeff')
+        fig.text(0.04, 0.5, 'SNP-Angles Pearson Coeff', va='center', rotation='vertical')
+        
+        fname = 'correlations_{}.png'.format('reduced' if is_reduced else 'full')
+        fname = os.path.join(main_dir, fname)
+        fig.savefig(fname)
+        #%%
         
         all_df = []
         for k in valid_k:
@@ -184,6 +195,11 @@ if __name__ == '__main__':
             all_df.append(df)
         
         all_df = pd.concat(all_df)
-    
-        sns.lmplot('X1', 'X2', data=all_df, hue='strain', fit_reg=False, col='m', row='n_embeddings')
-        plt.suptitle('is_reduced={}'.format(is_reduced))
+        #%%
+        fig = sns.lmplot('X1', 'X2', data=all_df, hue='strain', fit_reg=False, col='m', row='n_embeddings')
+        #plt.suptitle('is_reduced={}'.format(is_reduced))
+        
+        fname = 'tSNE_{}.png'.format('reduced' if is_reduced else 'full')
+        fname = os.path.join(main_dir, fname)
+        fig.savefig(fname)
+        
