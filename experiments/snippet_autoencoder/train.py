@@ -12,7 +12,7 @@ import os
 import sys
 
 from flow import ROIFlowBatch
-from models import AE3D
+from models import AE3D, AE2D, AE2D_RNN, EmbRegLoss
 
 #Be sure to use abspath linux does not give the path if one uses __file__
 _BASEDIR = os.path.dirname(os.path.abspath(__file__))
@@ -45,25 +45,33 @@ fname = 'BRC20067_worms10_food1-10_Set10_Pos5_Ch6_16052017_165021.hdf5'
 mask_file = os.path.join(data_dir,fname)
 feat_file = os.path.join(data_dir,fname.replace('.hdf5', '_featuresN.hdf5'))
 
-def main(model_name='AE3D', 
+def main(model_name='AE2D_RNN', 
          batch_size = 2,
          snippet_size = 255,
          roi_size = 128,
          n_epochs = 10000,
-         embedding_size = 256,
+         embedding_size = 32,
          max_n_frames = -1,
-         pretrained_path = ''
+         pretrained_path = '',
+         emb_reg_loss_mix = 0.
          ):
     #%%
     if 'AE3D':
         model = AE3D(embedding_size)
+        criterion = nn.MSELoss()
+    elif 'AE2D':
+        model = AE2D(embedding_size)
+        criterion = EmbRegLoss(emb_reg_loss_mix=emb_reg_loss_mix)
+    elif 'AE2D_RNN':
+        model = AE2D_RNN(embedding_size, hidden_size = 256, n_layer = 2)
+        criterion = EmbRegLoss(emb_reg_loss_mix=emb_reg_loss_mix)
     
     if os.path.exists(pretrained_path):
         print("Loading pretrained weigths")
         checkpoint = torch.load(pretrained_path, map_location=lambda storage, loc: storage)
         model.load_state_dict(checkpoint['state_dict'])
         
-    criterion = nn.MSELoss()
+    
     
     if max_n_frames> 0:
         dd = '_tiny{}'.format(max_n_frames)

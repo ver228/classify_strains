@@ -49,18 +49,37 @@ if __name__ == '__main__':
          n_epochs = 1000,
          embedding_size = 256,
          max_n_frames = -1,
-         pretrained_path = ''
+         pretrained_path = '',
+         emb_reg_loss_mix = 0
     )
     all_exp = []
-    pretrained = ['/work/ajaver/classify_strains/results/snippet_autoencoder/AE3D_L256_20171201_092555/checkpoint.pth.tar']
-    for fname in pretrained:
-        args = dft_params.copy()
-        args['pretrained_path'] = fname
-        all_exp.append(args)
-
+    
+    for em_s in [64, 256]:
+        for mod in ['AE3D', 'AE2D', 'AE2D_RNN']:
+            if 'AE2D' in mod:
+                i_dd = [0, 0.1]
+            else:
+                i_dd = [0]
+                
+            for e_reg in i_dd:
+                args = dft_params.copy()
+                args['model_name'] = mod
+                args['embedding_size'] = em_s
+                args['emb_reg_loss_mix'] = e_reg
+                all_exp.append(args)
+            
+    
+#    pretrained = ['/work/ajaver/classify_strains/results/snippet_autoencoder/AE3D_L256_20171201_092555/checkpoint.pth.tar']
+#    for fname in pretrained:
+#        args = dft_params.copy()
+#        args['pretrained_path'] = fname
+#        all_exp.append(args)
+    
 
     short_add = OrderedDict(
-         model_name = lambda x : x
+         model_name = lambda x : x,
+         embedding_size = lambda x : 'E{}'.format(x),
+         emb_reg_loss_mix = lambda x : '' if x <= 0 else 'mix{}'.format(x)
      )
     
     for args in all_exp:

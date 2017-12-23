@@ -101,7 +101,7 @@ def _get_file_parts(embeddings_file):
     model_name = parts[0]
     return model_name, n_embeddings, is_clf, is_ae, mix_emb, is_reduced
    #%% 
-    
+
 
 if __name__ == '__main__':
     import glob
