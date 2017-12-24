@@ -52,7 +52,7 @@ def main(model_name='AE2D_RNN',
          n_epochs = 10000,
          embedding_size = 32,
          max_n_frames = -1,
-         pretrained_path = '',
+         pretrained_path = None,
          emb_reg_loss_mix = 0.
          ):
     #%%
@@ -66,7 +66,7 @@ def main(model_name='AE2D_RNN',
         model = AE2D_RNN(embedding_size, hidden_size = 256, n_layer = 2)
         criterion = EmbRegLoss(emb_reg_loss_mix=emb_reg_loss_mix)
     
-    if os.path.exists(pretrained_path):
+    if pretrained_path is not None and os.path.exists(pretrained_path):
         print("Loading pretrained weigths")
         checkpoint = torch.load(pretrained_path, map_location=lambda storage, loc: storage)
         model.load_state_dict(checkpoint['state_dict'])

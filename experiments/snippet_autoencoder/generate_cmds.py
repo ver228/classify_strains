@@ -49,7 +49,7 @@ if __name__ == '__main__':
          n_epochs = 1000,
          embedding_size = 256,
          max_n_frames = -1,
-         pretrained_path = '',
+         pretrained_path = None,
          emb_reg_loss_mix = 0
     )
     all_exp = []
