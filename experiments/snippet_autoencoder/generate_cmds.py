@@ -96,7 +96,7 @@ if __name__ == '__main__':
                               )
 
         f_name = [func(args[k]) for k,func in short_add.items()]
-        f_name = '_'.join([x for x in f_name if x]) + '.sh'
+        f_name = '_'.join([x for x in f_name if x and x is not None]) + '.sh'
         f_name = os.path.join(save_dir, f_name)
         
         with open(f_name, 'w') as fid:

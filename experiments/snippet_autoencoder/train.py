@@ -67,7 +67,7 @@ def main(model_name='AE2D_RNN',
         criterion = EmbRegLoss(emb_reg_loss_mix=emb_reg_loss_mix)
     
     if pretrained_path is not None and os.path.exists(pretrained_path):
-        print("Loading pretrained weigths")
+        print("Loading pretrained weigths", pretrained_path)
         checkpoint = torch.load(pretrained_path, map_location=lambda storage, loc: storage)
         model.load_state_dict(checkpoint['state_dict'])
         
