@@ -83,7 +83,8 @@ if __name__ == '__main__':
      )
     
     for args in all_exp:
-        args_d = ' '.join(['--{} {}'.format(*d) for d in args.items()])
+        args_d = ' '.join(['--{} {}'.format(*d) for d in args.items() if d[1] is not None])
+        print(args_d)
         cmd_str = 'python {} {}'.format(main_file, args_d)
         
         mask_file = 'BRC20067_worms10_food1-10_Set10_Pos5_Ch6_16052017_165021.hdf5'
@@ -96,7 +97,8 @@ if __name__ == '__main__':
                               )
 
         f_name = [func(args[k]) for k,func in short_add.items()]
-        f_name = '_'.join([x for x in f_name if x and x is not None]) + '.sh'
+        f_name = [x for x in f_name if x and x is not None]
+        f_name = '_'.join(f_name) + '.sh'
         f_name = os.path.join(save_dir, f_name)
         
         with open(f_name, 'w') as fid:
