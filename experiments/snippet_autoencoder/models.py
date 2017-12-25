@@ -181,18 +181,22 @@ class AE2D_RNN(AE2D):
         cnn_embeddings = self.encoder(x)
         output_enc, hidden_enc = self.encoder_lstm(cnn_embeddings)
         
-        #%%
-        hidden_dec = tuple(x.clone() for x in hidden_enc)
+        if isinstance(tuple, hidden_enc):
+            hidden_dec = tuple(x.clone() for x in hidden_enc)
+        else:
+            hidden_dec = hidden_enc.clone()
         
         #first input made it zeros
         n_batch, n_time, hidden_size = output_enc.size()
         input_dec_ = torch.zeros(n_batch, 1, self.embedding_size)
         if output_enc.is_cuda:
+            print('Out CUDA!')
             input_dec_ = input_dec_.cuda()
         input_dec_ = Variable(input_dec_)
         #%%
         outputs_d = []
         for ii in range(n_time):
+            print('S', ii)
             output_dec, hidden_dec = self.decoder_lstm(input_dec_, hidden_dec)
             output_dec = self.decoder_linear(output_dec)
             input_dec_ = output_dec
