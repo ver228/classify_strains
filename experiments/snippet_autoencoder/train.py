@@ -45,7 +45,7 @@ fname = 'BRC20067_worms10_food1-10_Set10_Pos5_Ch6_16052017_165021.hdf5'
 mask_file = os.path.join(data_dir,fname)
 feat_file = os.path.join(data_dir,fname.replace('.hdf5', '_featuresN.hdf5'))
 
-def main(model_name='AE2D_RNN', 
+def main(model_name='AE2D', 
          batch_size = 2,
          snippet_size = 255,
          roi_size = 128,
@@ -56,30 +56,34 @@ def main(model_name='AE2D_RNN',
          emb_reg_loss_mix = 0.
          ):
     #%%
-    if 'AE3D':
+    postfix_ = ''
+    
+    if model_name == 'AE3D':
         model = AE3D(embedding_size)
         criterion = nn.MSELoss()
-    elif 'AE2D':
+    elif model_name == 'AE2D':
         model = AE2D(embedding_size)
-        criterion = EmbRegLoss(emb_reg_loss_mix=emb_reg_loss_mix)
-    elif 'AE2D_RNN':
+        criterion = EmbRegLoss(emb_reg_loss_mix = emb_reg_loss_mix)
+        postfix_ += '_mix{}'.format(emb_reg_loss_mix)
+        
+    elif model_name == 'AE2D_RNN':
         model = AE2D_RNN(embedding_size, hidden_size = 256, n_layer = 2)
-        criterion = EmbRegLoss(emb_reg_loss_mix=emb_reg_loss_mix)
-    
+        criterion = EmbRegLoss(emb_reg_loss_mix = emb_reg_loss_mix)
+        
+        postfix_ += '_mix{}'.format(emb_reg_loss_mix)
+        
     if pretrained_path is not None and os.path.exists(pretrained_path):
         print("Loading pretrained weigths", pretrained_path)
         checkpoint = torch.load(pretrained_path, map_location=lambda storage, loc: storage)
         model.load_state_dict(checkpoint['state_dict'])
         
-    
+    print(postfix_)
     
     if max_n_frames> 0:
-        dd = '_tiny{}'.format(max_n_frames)
-    else:
-        dd = ''
-    
-    details = dd + 'L{}'.format(embedding_size)
-    log_dir = os.path.join(log_dir_root, '{}_{}_{}'.format(model_name, details, time.strftime('%Y%m%d_%H%M%S')))
+        postfix_ += '_tiny{}'.format(max_n_frames)
+        
+    postfix_ += 'L{}'.format(embedding_size)
+    log_dir = os.path.join(log_dir_root, '{}_{}_{}'.format(model_name, postfix_, time.strftime('%Y%m%d_%H%M%S')))
     #criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
     

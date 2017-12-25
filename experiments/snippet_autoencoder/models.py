@@ -186,7 +186,7 @@ class AE2D_RNN(AE2D):
         
         #first input made it zeros
         n_batch, n_time, hidden_size = output_enc.size()
-        input_dec_ = torch.zeros(n_batch, 1, embedding_size)
+        input_dec_ = torch.zeros(n_batch, 1, self.embedding_size)
         if output_enc.is_cuda:
             input_dec_ = input_dec_.cuda()
         input_dec_ = Variable(input_dec_)
