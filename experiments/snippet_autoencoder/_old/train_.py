@@ -10,14 +10,9 @@ from torch import nn
 import time
 import os
 import sys
-import numpy as np
-import pickle
 
-
-from flow import FlowSampled, read_dataset_info
-from models import AE3D, AE2D, EmbRegLoss
-
-
+from flow import ROIFlowBatch
+from models import AE3D, AE2D, AE2D_RNN, EmbRegLoss
 
 #Be sure to use abspath linux does not give the path if one uses __file__
 _BASEDIR = os.path.dirname(os.path.abspath(__file__))
@@ -28,27 +23,39 @@ from trainer import TrainerAutoEncoder
 
 
 is_cuda = torch.cuda.is_available()
-log_dir_root = os.path.join(os.environ['HOME'], 'Github/classify_strains/results')
+if sys.platform == 'linux':
+    data_dir = os.environ['TMPDIR']
+else:        
+    data_dir = '/Users/ajaver/OneDrive - Imperial College London/classify_strains/train_data/videos'
 
-_set_divisions_file = '/data/ajaver/CeNDR_ROIs/set_divisions.p'
-with open( _set_divisions_file, "rb" ) as fid:
-    set_divisions = pickle.load(fid)
 
+if sys.platform == 'linux':
+    log_dir_root = '/work/ajaver/classify_strains/results'
+else:        
+    log_dir_root = '/Users/ajaver/OneDrive - Imperial College London/classify_strains/logs/'
 
-def main(model_name='AE2D', 
-         batch_size = 32,
-         snippet_size = 5,#255,
+#flag to check if cuda is available
+is_cuda = torch.cuda.is_available()
+
+#add the parent directory to the log results
+pdir = os.path.split(_BASEDIR)[-1]
+log_dir_root = os.path.join(log_dir_root, pdir)
+
+fname = 'BRC20067_worms10_food1-10_Set10_Pos5_Ch6_16052017_165021.hdf5'
+mask_file = os.path.join(data_dir,fname)
+feat_file = os.path.join(data_dir,fname.replace('.hdf5', '_featuresN.hdf5'))
+
+def main(model_name='AE2D_RNN', 
+         batch_size = 2,
+         snippet_size = 255,
          roi_size = 128,
-         n_epochs = 20000,
-         size_per_epoch = 1000,
+         n_epochs = 10000,
          embedding_size = 32,
-         set_type = 'train',
-         pretrained_path = '/home/ajaver@cscdom.csc.mrc.ac.uk/Github/classify_strains/results/AE2D__mix0.1L32_20180202_170055/checkpoint.pth.tar',
+         max_n_frames = -1,
+         pretrained_path = None,
          emb_reg_loss_mix = 0.
          ):
     #%%
-    assert set_type in ['', 'train', 'tiny', 'test']
-    
     postfix_ = ''
     
     if model_name == 'AE3D':
@@ -59,17 +66,24 @@ def main(model_name='AE2D',
         criterion = EmbRegLoss(emb_reg_loss_mix = emb_reg_loss_mix)
         postfix_ += '_mix{}'.format(emb_reg_loss_mix)
         
+    elif model_name == 'AE2D_RNN':
+        model = AE2D_RNN(embedding_size, hidden_size = 256, n_layer = 2)
+        criterion = EmbRegLoss(emb_reg_loss_mix = emb_reg_loss_mix)
+        
+        postfix_ += '_mix{}'.format(emb_reg_loss_mix)
+        
     if pretrained_path is not None and os.path.exists(pretrained_path):
         print("Loading pretrained weigths", pretrained_path)
         checkpoint = torch.load(pretrained_path, map_location=lambda storage, loc: storage)
         model.load_state_dict(checkpoint['state_dict'])
         
-    postfix_ = '_snippet{}'.format(snippet_size)
-    postfix_ += '_' + set_type
+    print(postfix_)
+    
+    if max_n_frames> 0:
+        postfix_ += '_tiny{}'.format(max_n_frames)
+        
     postfix_ += 'L{}'.format(embedding_size)
     log_dir = os.path.join(log_dir_root, '{}_{}_{}'.format(model_name, postfix_, time.strftime('%Y%m%d_%H%M%S')))
-    
-    
     #criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
     
@@ -80,14 +94,15 @@ def main(model_name='AE2D',
         model = model.cuda()
         criterion = criterion.cuda()
     
-    if set_type in set_divisions:
-        all_data = set_divisions[set_type]
-    else:
-        all_data = read_dataset_info()
-    
-    
-    generator = FlowSampled(all_data, size_per_epoch, batch_size, snippet_size, is_cuda=is_cuda)
-
+    generator = ROIFlowBatch(mask_file, 
+                             feat_file, 
+                             roi_size = roi_size,
+                             batch_size = batch_size,
+                             snippet_size = snippet_size,
+                             is_cuda = is_cuda,
+                             size_per_epoch = 1000,
+                             max_n_frames = max_n_frames
+                             )
     
     t = TrainerAutoEncoder(
                  model,

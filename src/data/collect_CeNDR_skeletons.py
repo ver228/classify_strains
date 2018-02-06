@@ -88,8 +88,6 @@ if __name__ == '__main__':
                       main_file,  
                       file_ext = '_featuresN.hdf5'
                       )
-            
-    
     #%%
     #get snps vector
     snps = read_CeNDR_snps()

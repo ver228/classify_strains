@@ -8,3 +8,5 @@ experiments/cmd_scripts/
 experiments/worm_autoencoder/AE_*.png
 
 experiments/worm_autoencoder/VAE*.png
+
+results/*
