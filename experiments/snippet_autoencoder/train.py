@@ -36,14 +36,14 @@ with open( _set_divisions_file, "rb" ) as fid:
 
 
 def main(model_name='AE2D', 
-         batch_size = 32,
-         snippet_size = 5,#255,
+         batch_size = 2,
+         snippet_size = 255,
          roi_size = 128,
          n_epochs = 20000,
          size_per_epoch = 1000,
          embedding_size = 32,
          set_type = 'train',
-         pretrained_path = '/home/ajaver@cscdom.csc.mrc.ac.uk/Github/classify_strains/results/AE2D__mix0.1L32_20180202_170055/checkpoint.pth.tar',
+         pretrained_path = '',#/home/ajaver@cscdom.csc.mrc.ac.uk/Github/classify_strains/results/AE2D__mix0.1L32_20180202_170055/checkpoint.pth.tar',
          emb_reg_loss_mix = 0.
          ):
     #%%
