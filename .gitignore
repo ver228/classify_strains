@@ -10,3 +10,4 @@ experiments/worm_autoencoder/AE_*.png
 experiments/worm_autoencoder/VAE*.png
 
 results/*
+.DS_Store
