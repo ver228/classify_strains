@@ -13,8 +13,9 @@ echo cuda_id: $CUDA_VISIBLE_DEVICES
 
 python $HOME/Github/classify_strains/experiments/ts_models/train.py \
 --model_name 'simple' --set_type 'angles' --n_epochs 1000 --batch_size 8 \
---num_workers 1 --lr 0.0001  --copy_tmp '/tmp/avelino' \
---init_model_path 'log_divergent_set/angles_20180522_165626_simple_div_lr0.0001_batch8/model_best.pth.tar'
+--num_workers 1 --optimizer 'sgd' --lr 0.0001 \
+ --copy_tmp '/tmp/avelino'$CUDA_VISIBLE_DEVICES \
+--init_model_path 'logs/angles_20180524_173345_simple_lr0.0001_batch8/model_best.pth.tar'
 
 echo "Finished at :"`date`
 exit 0

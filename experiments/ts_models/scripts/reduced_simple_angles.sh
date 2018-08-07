@@ -11,7 +11,9 @@ echo "Username: " `whoami`
 echo $HOME
 echo cuda_id: $CUDA_VISIBLE_DEVICES
 
-python $HOME/Github/classify_strains/experiments/ts_models/train.py --is_divergent_set --model_name 'simple' --set_type 'angles' --n_epochs 1000 --batch_size 8 --num_workers 1 --lr 0.0001 --copy_tmp '/tmp/avelino'
+python $HOME/Github/classify_strains/experiments/ts_models/train.py --is_divergent_set \
+--model_name 'simple' --set_type 'angles' --n_epochs 1000 --batch_size 8 --num_workers 1 \
+--lr 0.0001 --copy_tmp '/tmp/avelino'$CUDA_VISIBLE_DEVICES
 
 echo "Finished at :"`date`
 

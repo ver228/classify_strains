@@ -5,8 +5,7 @@ Created on Tue Nov 21 11:42:24 2017
 
 @author: ajaver
 """
-from darknet import Darknet
-from models import CNNClf, CNNClf1D
+from models import CNNClf, CNNClf1D, Darknet, SimpleDilated, SimpleDilated1D, drn111111
 from flow import collate_fn, SkelTrainer
 from path import get_path
 
@@ -77,16 +76,21 @@ class Trainer():
                  n_epochs = 1000,
                 batch_size = 4,
                 num_workers = 4,
+                optimizer = 'adam',
                 lr=1e-2,
-                model_name = 'darknet',
+                weight_decay = 0,
+                model_name = 'simple',
                 set_type = 'angles',
                 is_balance_training = True,
                 is_tiny = False,
                 is_divergent_set = False,
                 root_prefix = None, 
                 copy_tmp = None,
-                init_model_path = None):
+                init_model_path = None,
+                is_snp = False
+                ):
         
+        self.is_snp = is_snp
         self.n_epochs = n_epochs
         
         if torch.cuda.is_available():
@@ -105,10 +109,21 @@ class Trainer():
             self.fname = copy_data_to_tmp(self.fname, copy_tmp)
             
         
+        if self.is_snp:
+            return_label = False
+            return_snp = True
+            criterion = nn.MultiLabelSoftMarginLoss()
+        else:
+            return_label = True
+            return_snp = False
+            criterion = nn.CrossEntropyLoss()
+        
         self.gen = SkelTrainer(fname = self.fname, 
                               is_balance_training = is_balance_training,
                               is_tiny = is_tiny,
-                              is_divergent_set = is_divergent_set
+                              is_divergent_set = is_divergent_set,
+                              return_label = return_label, 
+                              return_snp = return_snp
                           )
         
         self.loader = DataLoader(self.gen, 
@@ -117,6 +132,8 @@ class Trainer():
                             num_workers = num_workers)
         
         self.num_classes = self.gen.num_classes
+        
+        
         self.embedding_size = self.gen.embedding_size
         if model_name == 'darknet':
             self.model = Darknet([1, 2, 2, 2, 2], self.num_classes)
@@ -124,6 +141,12 @@ class Trainer():
             self.model = CNNClf(self.num_classes)
         elif model_name == 'simple1d':
             self.model = CNNClf1D(self.embedding_size, self.num_classes)
+        elif model_name == 'drn111111':
+            self.model = drn111111(self.num_classes)
+        elif model_name == 'simpledilated':
+            self.model = SimpleDilated(self.num_classes)
+        elif model_name == 'simpledilated1d':
+            self.model = SimpleDilated1D(self.embedding_size, self.num_classes)
         else:
             raise ValueError('Invalid model name {}'.format(model_name))
         
@@ -137,6 +160,16 @@ class Trainer():
             self.model.load_state_dict(state['state_dict'])
             model_name = 'R_' + model_name
         
+        self.lr_scheduler = None
+        if optimizer == 'adam':
+            self.optimizer = torch.optim.Adam(self.model.parameters(), lr = lr, weight_decay=weight_decay)
+        elif optimizer == 'sgd':
+            self.optimizer = torch.optim.SGD(self.model.parameters(), lr = lr, momentum = 0.9, weight_decay = weight_decay)
+            #self.lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, 'min', patience = 10)
+        
+        else:
+            raise ValueError('Invalid optimizer name {}'.format(optimizer))
+        
         log_dir_root =  os.path.join(self.results_dir_root, 'logs')
         
         add_postifx = ''
@@ -149,19 +182,21 @@ class Trainer():
             log_dir_root =  os.path.join(self.results_dir_root, 'log_divergent_set')
             add_postifx = '_div'
         
+        if self.is_snp:
+            log_dir_root = log_dir_root + '_snp'
+        
         
         now = datetime.datetime.now()
         bn = now.strftime('%Y%m%d_%H%M%S') + '_' + model_name
         bn += add_postifx
-    
-        bn = '{}_{}_lr{}_batch{}'.format(set_type, bn, lr, batch_size)
+        
+        bn = '{}_{}_{}_lr{}_wd{}_batch{}'.format(set_type, bn, optimizer, lr, weight_decay, batch_size)
         print(bn)
     
         self.log_dir = os.path.join(log_dir_root, bn)
         self.logger = SummaryWriter(log_dir = self.log_dir)
-        self.criterion = nn.CrossEntropyLoss()
+        self.criterion = criterion
         
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr = lr)
         self.model = self.model.to(self.device)
         
         
@@ -203,20 +238,22 @@ class Trainer():
             n_iter += 1
             avg_loss += loss.item()
             
+            if not self.is_snp:
+                all_res.append(get_predictions(pred, target))
             
-            all_res.append(get_predictions(pred, target))
             del loss, pred, X, target
 
         avg_loss /= len(self.loader)
+        tb = [(log_prefix + 'epoch_loss', avg_loss)]
         
-        (ytrue, ypred, pred1, pred5) = map(list, map(itertools.chain.from_iterable, zip(*all_res)))
-        f1 = f1_score(ytrue, ypred, average='macro')
-        
-        tb = [(log_prefix + 'epoch_loss', avg_loss),
-              (log_prefix + 'f1', f1),
-              (log_prefix + 'pred1', np.mean(pred1)*100),
-              (log_prefix + 'pred5', np.mean(pred5)*100)
-              ]
+        if all_res:
+            (ytrue, ypred, pred1, pred5) = map(list, map(itertools.chain.from_iterable, zip(*all_res)))
+            f1 = f1_score(ytrue, ypred, average='macro')
+            
+            tb  += [(log_prefix + 'f1', f1),
+                  (log_prefix + 'pred1', np.mean(pred1)*100),
+                  (log_prefix + 'pred5', np.mean(pred5)*100)
+                  ]
         
         for tt, val in tb:
             self.logger.add_scalar(tt, val, epoch)
@@ -232,7 +269,10 @@ class Trainer():
             _, n_iter_train = self._epoch(n_iter_train, epoch, is_train = True)
             with torch.no_grad():
                 test_avg_loss, n_iter_test = self._epoch(n_iter_test, epoch, is_train = False)
-        
+            
+            if self.lr_scheduler:
+                self.lr_scheduler.step(test_avg_loss)
+            
             is_best = test_avg_loss < best_loss
             best_loss = min(test_avg_loss, best_loss)
             

@@ -55,27 +55,27 @@ def _h_angles(skeletons):
 
 
 if __name__ == '__main__':
-    p = 'loc' if sys.platform == 'darwin' else 'ox'
+    p = 'osx' if sys.platform == 'darwin' else 'centos_oxford'
     root = _root_dirs[p]
-#    
-#    emb_set = 'AE_emb_20180206'
-#    root_dir = root + 'experiments/classify_strains/autoencoders/CeNDR_ROIs_embeddings/AE2D__snippet5_trainL32_20180206_123614_epoch107'
-#    f_ext = '_embeddings.hdf5'
-#    col_label = 'roi_index'
-#    n_embeddings = 32
-#    embeddings_field = '/embeddings'
+    
+    emb_set = 'AE_emb_20180206'
+    root_dir = root + 'experiments/classify_strains/autoencoders/CeNDR_ROIs_embeddings/AE2D__snippet5_trainL32_20180206_123614_epoch107'
+    f_ext = '_embeddings.hdf5'
+    col_label = 'roi_index'
+    n_embeddings = 32
+    embeddings_field = '/embeddings'
     
     
-    emb_set = 'angles'
-    root_dir = root + 'screenings/CeNDR/Results'
-    f_ext = '_featuresN.hdf5'
-    col_label = 'skeleton_id'
-    n_embeddings = 48
-    embeddings_field = '/coordinates/skeletons'
+#    emb_set = 'angles'
+#    root_dir = root + 'screenings/CeNDR/Results'
+#    f_ext = '_featuresN.hdf5'
+#    col_label = 'skeleton_id'
+#    n_embeddings = 48
+#    embeddings_field = '/coordinates/skeletons'
     
     
     
-    save_file = root + 'experiments/classify_strains/CeNDR_{}.hdf5'.format(emb_set)
+    save_file = root + 'experiments/classify_strains/N_CeNDR_{}.hdf5'.format(emb_set)
     fnames = glob.glob(os.path.join(root_dir, '**', '*' + f_ext), recursive = True)
     fnames = sorted(fnames)
     #%%
@@ -137,12 +137,13 @@ if __name__ == '__main__':
                         w_emb, _ = _h_angles(w_emb)
                         
                     angle_tab.append(w_emb)
+                    angle_tab.append(np.full((1, n_embeddings), np.nan)) #add this to be sure I am not reading between embeddings when processing the data
                     
                     row = (ifname, w_ind,
                            dat['frame_number'].min(), dat['frame_number'].max(),
                            irow, irow + w_emb.shape[0],
                            )
-                    irow += w_emb.shape[0]
+                    irow += w_emb.shape[0] + 1
                     
                     traj_ranges.append(row)
                     

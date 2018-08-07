@@ -78,6 +78,7 @@ class CNNClf(nn.Module):
         x = self.fc_clf(x)
         return x
 
+#%%
 
 class CNNClf1D(nn.Module):
     def __init__(self, n_channels, num_output):
@@ -131,84 +132,300 @@ class CNNClf1D(nn.Module):
         return x
 
 #%%
+#https://arxiv.org/pdf/1705.09914.pdf
+#open.ai video
 
-class FullLoss(nn.Module):
-    def __init__(self, embedding_loss_mixture=0.01, loss_type='l2'):
-        super().__init__()
-
-        self.embedding_loss_mixture = embedding_loss_mixture
-        self.classification_loss = nn.CrossEntropyLoss()
-        self.embedding_loss = loss_funcs[loss_type]
-        
-    def forward(self, embedding_output, target_classes):
-        classification, video_embedding, snps_embedding = embedding_output
-        classification_loss = self.classification_loss(classification,
-                                                       target_classes)
-        
-        # Can't use the Loss layer here because it doesn't like - aej, likely due to autograd gradients
-        _embedding_loss = self.embedding_loss(snps_embedding, video_embedding)
-        
-        loss = classification_loss + self.embedding_loss_mixture * _embedding_loss
-        return loss
-
-class EmbeddingModel(nn.Module):
-    def __init__(self, video_model, n_classes, snps_size, embedding_size):
-        super().__init__()
-        self.video_model = video_model
-        self.embedding_size = embedding_size
-        self.snps_size = snps_size
-        
-        self.snp_mapper = nn.Sequential(
-            nn.Linear(snps_size, 2048), 
-            nn.Linear(2048, embedding_size)
-        )
-        self.classification = nn.Linear(embedding_size, n_classes)
-
-        for m in self.snp_mapper.modules():
-            weights_init_xavier(m)
+def conv_layer(ni, nf, ks=3, stride=1, dilation=1):
+    if isinstance(ks, (float, int)):
+        ks = (ks, ks)
+    
+    if isinstance(dilation, (float, int)):
+        dilation = (dilation, dilation)
+    
+    pad = [x[0]//2*x[1] for x in zip(ks, dilation)]
+    
+    return nn.Sequential(
             
-        for m in self.classification.modules():
-            weights_init_xavier(m)
+            
+           nn.Conv2d(ni, nf, ks, bias = False, stride = stride, padding = pad, dilation = dilation),
+           nn.BatchNorm2d(nf),
+           nn.LeakyReLU(negative_slope = 0.1, inplace = True)
+           )
 
-    def forward(self, input_d):
-        video_input, snps = input_d
-        video_embedding = self.video_model(video_input)
-        classification = self.classification(video_embedding)
-        snps_embedding = self.snp_mapper(snps)
-        return classification, video_embedding, snps_embedding
+class ResLayerBottleNeck(nn.Module):
+    def __init__(self, ni):
+        super().__init__()
+        self.conv1 = conv_layer(ni, ni*2, ks = 1) #bottleneck
+        self.conv2 = conv_layer(ni*2, ni, ks = 3)
+    
+    def forward(self, x): 
+        out = self.conv1(x)
+        out = self.conv2(out)
+        return x + out
 
-class EmbeddingModelDum(EmbeddingModel):
-    '''
-    Remove the embedding layer.  Use it for testing. 
-    '''
-    def __init__(self, *args):
-        super().__init__(*args)
-        self.snp_mapper = None
+    
+class Darknet(nn.Module):
+    def make_group_layer(self, ch_in, num_blocks, stride = 1):
+        return [conv_layer(ch_in, ch_in*2, stride = stride)
+                ] + [ResLayerBottleNeck(ch_in*2) for i in range(num_blocks)]
+    
+    
+    def __init__(self, num_blocks, num_classes, nf = 32):
+        super().__init__()
+        layers = [conv_layer(1, nf, ks=3, stride=1)]
         
-    def forward(self, input_d):
-        video_input, snps = input_d
-        video_embedding = self.video_model(video_input)
-        classification = self.classification(video_embedding)
-        return classification, video_embedding, video_embedding
+        for i, nb in enumerate(num_blocks):
+            #this is not part of dark net, but I want to reduce the size of the model
+            #otherwise I start to have problems with memory
+            layers += [nn.MaxPool2d((1, 4))]
+            layers += self.make_group_layer(nf, nb, stride = 2)
+            nf *= 2
+        
+        
+        layers += [nn.AdaptiveAvgPool2d(1),  Flatten()]
+        self.cnn_clf = nn.Sequential(*layers)
+        
+        self.fc_clf = nn.Sequential(
+                nn.Dropout(0.5),
+                nn.Linear(nf, 32),
+                
+                nn.Dropout(0.5),
+                nn.ReLU(),
+                nn.Linear(32, num_classes)
+                )
+        
+        for m in self.modules():
+            weights_init_xavier(m)
+        
+    def forward(self, x):
+        x = self.cnn_clf(x)
+        x = self.fc_clf(x)
+        return x
+#%% ResNet dilated
 
+class ResLayer(nn.Module):
+    def __init__(self, ni, ks = 3, dilation=1):
+        super().__init__()
+        self.conv1 = conv_layer(ni, ni, ks = ks, dilation = dilation) 
+        self.conv2 = conv_layer(ni, ni, ks = ks, dilation = dilation)
+    
+    def forward(self, x): 
+        out = self.conv1(x)
+        out = self.conv2(out)
+        return x + out  
 
-
-def simple_no_emb(gen, embedding_size):
-    video_model = CNNClf(embedding_size)
+class DilatedResNet(nn.Module):
+    #https://github.com/fyu/drn/blob/master/drn.py
+    def make_group_layer(self, ch_in, num_blocks, stride = 1, dilation=1):
+        return [conv_layer(ch_in, ch_in*2, stride = stride, dilation = dilation)
+                ] + [ResLayer(ch_in*2, dilation = dilation) for i in range(num_blocks)]
     
     
-    model = EmbeddingModelDum(video_model, 
-                   gen.n_classes, 
-                   1, 
-                   embedding_size)
-    return model
+    def __init__(self, num_blocks, num_classes, nf = 16, dropout_fc = 0.5):
+        super().__init__()
+        layers = [conv_layer(1, nf, ks = 7, stride=1)]
+        
+        
+        dilation = 1
+        for ii, nb in enumerate(num_blocks):
+            if ii < 2:
+                stride = (2,2)
+            else:
+                stride = (1,2)
+            
+            if ii >= len(num_blocks) - 2:
+                dilation *= 2
+            
+            #this is not part of dark net, but I want to reduce the size of the model
+            #otherwise I start to have problems with memory
+            layers += self.make_group_layer(nf, nb, stride = stride, dilation = (1, dilation))
+            nf *= 2
+        
+        #nf = nf/2
+            
+        layers += [conv_layer(nf, nf, ks = 3, dilation = (1, 2)),
+        conv_layer(nf, nf, ks = 3, dilation = 2)]
+        
+        layers += [conv_layer(nf, nf, ks = 3, dilation = 1),
+        conv_layer(nf, nf, ks = 3, dilation = 1)]
+        
+        
+        
+        
+        self.cnn_clf = nn.Sequential(*layers)
+        
+        self.fc_clf = nn.Sequential(
+                nn.AdaptiveAvgPool2d(1),  
+                nn.Dropout(dropout_fc),
+                nn.Conv2d(nf, num_classes, kernel_size=1,
+                                stride=1, padding=0, bias=True),
+                Flatten()
+                )
+        
+        for m in self.modules():
+            weights_init_xavier(m)
+    
+    def forward(self, x):
+        x = self.cnn_clf(x)
+        x = self.fc_clf(x)
+        return x
 
-def simple_w_emb(gen, embedding_size):
-    video_model = CNNClf(embedding_size)
+def drn111111(num_classes):
+    return DilatedResNet([1, 1, 1, 1, 1, 1], num_classes)    
+
+#%%
+class SimpleDilated(nn.Module):
+    #https://github.com/fyu/drn/blob/master/drn.py
+    
+    def __init__(self, num_classes, nf = 16, dropout_fc = 0.5):
+        super().__init__()
+        layers = [conv_layer(1, nf, ks = 7, stride=1)]
+        
+        
+        num_blocks = 5
+        for ii in range(num_blocks):
+            if ii < 2:
+                stride = (2,2)
+            else:
+                stride = (1,2)
+            
+            layers += conv_layer(nf, nf*2, stride = stride, dilation = 1)
+            nf *= 2
+        
+            
+        layers += [
+                conv_layer(nf, nf, ks = 3, dilation = (1, 2)),
+                conv_layer(nf, nf, ks = 3, dilation = (1, 4)),
+                conv_layer(nf, nf, ks = 3, dilation = (1, 2)),
+                conv_layer(nf, nf, ks = 3, dilation = (1, 1))
+                ]
+        
+        
+        
+        
+        self.cnn_clf = nn.Sequential(*layers)
+        
+        self.fc_clf = nn.Sequential(
+                nn.AdaptiveAvgPool2d(1),  
+                nn.Dropout(dropout_fc),
+                nn.Conv2d(nf, num_classes, kernel_size=1,
+                                stride=1, padding=0, bias=True),
+                Flatten()
+                )
+        
+        for m in self.modules():
+            weights_init_xavier(m)
+    
+    def forward(self, x):
+        x = self.cnn_clf(x)
+        x = self.fc_clf(x)
+        return x    
+#%%
+def conv_layer1d(ni, nf, ks=3, stride=1, dilation=1):
+    pad = ks//2*dilation
+    return nn.Sequential(
+            
+            
+           nn.Conv1d(ni, nf, ks, bias = False, stride = stride, padding = pad, dilation = dilation),
+           nn.BatchNorm1d(nf),
+           nn.LeakyReLU(negative_slope = 0.1, inplace = True)
+           )
+class SimpleDilated1D(nn.Module):
+    #https://github.com/fyu/drn/blob/master/drn.py
+    
+    def __init__(self, embedding_size, num_classes, nf = 32, dropout_fc = 0.5):
+        super().__init__()
+        layers = [conv_layer1d(embedding_size, nf, ks = 7, stride=1),
+                  conv_layer1d(nf, nf, ks = 7, stride=1)
+                  ]
+        
+        
+        num_blocks = 5
+        stride = 2
+        for ii in range(num_blocks):
+            layers += conv_layer1d(nf, nf*2, stride = stride, dilation = 1)
+            nf *= 2
+        
+            
+        layers += [
+                conv_layer1d(nf, nf, ks = 3, dilation = 2),
+                conv_layer1d(nf, nf, ks = 3, dilation = 4),
+                conv_layer1d(nf, nf, ks = 3, dilation = 2),
+                conv_layer1d(nf, nf, ks = 3, dilation = 1)
+                ]
+        
+        
+        
+        
+        self.cnn_clf = nn.Sequential(*layers)
+        
+        self.fc_clf = nn.Sequential(
+                nn.AdaptiveAvgPool1d(1),  
+                nn.Dropout(dropout_fc),
+                nn.Conv1d(nf, num_classes, kernel_size=1,
+                                stride=1, padding=0, bias=True),
+                Flatten()
+                )
+        
+        for m in self.modules():
+            weights_init_xavier(m)
+    
+    def forward(self, x):
+        if x.dim() == 4: #remove the first channel
+            d = x.size()
+            x = x.view(d[0], d[2], d[3])
+        x = self.cnn_clf(x)
+        x = self.fc_clf(x)
+        return x    
+    
+#%%            
+if __name__ == '__main__':
+    import os
+    import torch
+    from path import get_path
+    
+    from flow import collate_fn, SkelTrainer
+    import tqdm
+    from torch.utils.data import DataLoader
     
     
-    model = EmbeddingModel(video_model, 
-                   gen.n_classes, 
-                   gen.n_snps, 
-                   embedding_size)
-    return model
+    
+    #set_type = 'angles'
+    set_type = 'AE_emb_20180206'
+    
+    fname, results_dir_root = get_path(set_type)
+    
+    cuda_id = 0
+    if torch.cuda.is_available():
+        dev_str = "cuda:" + str(cuda_id)
+        print("THIS IS CUDA!!!!")
+        
+    else:
+        dev_str = 'cpu'
+      
+    print(dev_str)
+    device = torch.device(dev_str)
+    
+    gen = SkelTrainer(fname = fname,
+                      is_divergent_set=True)
+    
+    #%%
+    model = SimpleDilated1D(gen.embedding_size,gen.num_classes)
+    model = model.to(device)
+    
+    #%%
+    batch_size = 1
+    loader = DataLoader(gen, 
+                        batch_size = batch_size, 
+                        collate_fn = collate_fn,
+                        num_workers = batch_size)
+    #%%
+    all_res = []
+    pbar = tqdm.tqdm(loader)
+    for x_in, y_in in pbar:
+        X = x_in.to(device)
+        target =  y_in.to(device)
+        break 
+    #%%
+    pred = model(X)
+        

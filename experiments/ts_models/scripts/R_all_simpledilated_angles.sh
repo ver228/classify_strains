@@ -12,8 +12,11 @@ echo $HOME
 echo cuda_id: $CUDA_VISIBLE_DEVICES
 
 python $HOME/Github/classify_strains/experiments/ts_models/train.py \
---model_name 'simple' --set_type 'angles' --n_epochs 1000 --batch_size 8 \
---num_workers 1 --lr 0.0001  --copy_tmp '/tmp/avelino'$CUDA_VISIBLE_DEVICES
+--model_name 'simpledilated' --set_type 'angles' --n_epochs 1000 --batch_size 8 \
+--num_workers 1 --optimizer 'sgd' --lr 0.0001 \
+--copy_tmp '/tmp/avelino'$CUDA_VISIBLE_DEVICES \
+--init_model_path 'logs/angles_20180530_010133_simpledilated_sgd_lr0.001_batch8/model_best.pth.tar'
+
 
 echo "Finished at :"`date`
 exit 0

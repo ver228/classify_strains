@@ -5,7 +5,7 @@ Created on Sat Oct 28 18:50:59 2017
 
 @author: ajaver
 """
-import tensorflow as tf
+from tensorboardX import SummaryWriter
 
 import torch
 import os
@@ -26,16 +26,16 @@ class TBLogger(object):
     
     def __init__(self, log_dir):
         """Create a summary writer logging to log_dir."""
-        self.writer = tf.summary.FileWriter(log_dir)
+        self.writer = SummaryWriter(log_dir)
 
     def scalar_summary(self, tag, value, step):
         """Log a scalar variable."""
-        summary = tf.Summary(value=[tf.Summary.Value(tag=tag, simple_value=value)])
-        self.writer.add_summary(summary, step)
+        self.writer.add_scalar(tag, value, step)
 
 class TrainerAutoEncoder(object):
     def __init__(self, 
                  model,
+                 device,
                  optimizer,
                  criterion,
                  generator,
@@ -48,6 +48,7 @@ class TrainerAutoEncoder(object):
         self.criterion = criterion
         self.generator = generator
         self.n_epochs = n_epochs
+        self.device = device
         
         # Set the logger
         self.log_dir = log_dir
@@ -81,6 +82,8 @@ class TrainerAutoEncoder(object):
         
         all_metrics = []
         for input_var in pbar:
+            input_var.to(self.device)
+
             output = self.model(input_var)
             loss = self.criterion(output, input_var)
             self.optimizer.zero_grad()
@@ -104,7 +107,7 @@ class TrainerAutoEncoder(object):
             if is_train:
                 prefix = 'train_'
              
-            tb = [('loss' , loss.data[0])]
+            tb = [('loss' , loss.item())]
             tb = [(prefix + x, y) for x,y in tb]
             
             return tb
